@@ -1,7 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// La base de données sera créée dans le dossier racine de Render
+// La base de données sera créée dans le dossier racine
 const dbPath = path.join(__dirname, '../../../betwallet.db');
 const db = new sqlite3.Database(dbPath);
 

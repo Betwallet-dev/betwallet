@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000/api' 
+    : 'https://betwallet-api.onrender.com/api';
 console.log('🔗 API URL:', API_URL); // Ajoutez cette ligne pour déboguer
 
 // Vérifier l'authentification

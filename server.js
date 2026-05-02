@@ -2,105 +2,227 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
-// Initialisation de la base de données
-const db = require('./src/database/init');
+// Initialisation de la base de données - CHEMIN CORRIGÉ
+const possiblePaths = [
+    path.join(__dirname, 'backend', 'src', 'database', 'init.js'),
+    path.join(__dirname, 'src', 'database', 'init.js')
+];
 
-// Import des contrôleurs
-const authController = require('./src/controllers/auth.controller.db');
-const walletController = require('./src/controllers/wallet.controller.db');
-const authMiddleware = require('./src/middleware/auth.middleware');
+let db;
+let initPathFound = null;
+for (const p of possiblePaths) {
+    try {
+        if (require.resolve(p)) {
+            db = require(p);
+            initPathFound = p;
+            break;
+        }
+    } catch (e) {
+        // Ignorer
+    }
+}
+
+if (!db) {
+    console.error('❌ Fichier init.js introuvable. Chemins cherchés:', possiblePaths);
+    process.exit(1);
+}
+console.log(`✅ Base de données chargée depuis: ${initPathFound}`);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== CONFIGURATION CORS CORRIGÉE ====================
-const allowedOrigins = [
-    'http://localhost:54892',
-    'http://127.0.0.1:54892',
-    'http://localhost:3000',
-    'http://localhost:5500',
-    'http://localhost:8080'
-];
-
+// Middleware
 app.use(cors({
-    origin: function(origin, callback) {
-        // Permettre les requêtes sans origine (ex: Postman)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'La politique CORS ne permet pas cette origine.';
-            return callback(new Error(msg), false);
-        }
-        return callback(null, true);
-    },
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true,
-    optionsSuccessStatus: 200
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-// Gestion explicite des preflight requests
-app.options('*', cors());
-
-// ==================== MIDDLEWARE ====================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging simple
-app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
-    next();
-});
+// Servir le frontend (pour Render)
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ==================== ROUTES ====================
-// Routes publiques
+
+// Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        message: 'BetWallet API is running',
-        timestamp: new Date().toISOString(),
-        database: 'SQLite connected'
-    });
+    res.json({ status: 'OK', message: 'BetWallet API is running' });
 });
 
-app.post('/api/auth/register', authController.register);
-app.post('/api/auth/login', authController.login);
-
-// Routes protégées
-app.get('/api/wallet/balance', authMiddleware, walletController.getBalance);
-app.get('/api/wallet/dashboard', authMiddleware, walletController.getDashboardData);
-app.post('/api/wallet/send', authMiddleware, walletController.sendTransaction);
-app.get('/api/wallet/transactions', authMiddleware, walletController.getTransactions);
-
-// Déconnexion
-app.post('/api/auth/logout', authMiddleware, async (req, res) => {
-    res.json({ success: true, message: 'Déconnecté' });
-});
-
-// ==================== GESTION DES ERREURS ====================
-app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route non trouvée' });
-});
-
-app.use((err, req, res, next) => {
-    console.error('❌ Erreur:', err);
-    
-    if (err.message.includes('CORS')) {
-        return res.status(403).json({ error: 'CORS error: ' + err.message });
+// Inscription
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
+        
+        if (!username || !email || !password) {
+            return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
+        }
+        
+        // Vérifier si l'utilisateur existe
+        const existingUser = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+                if (err) reject(err);
+                resolve(row);
+            });
+        });
+        
+        if (existingUser) {
+            return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
+        }
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const walletAddress = `BetWallet_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        
+        // Créer l'utilisateur
+        const userId = await new Promise((resolve, reject) => {
+            db.run('INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)',
+                [username, email, hashedPassword, walletAddress],
+                function(err) {
+                    if (err) reject(err);
+                    resolve(this.lastID);
+                });
+        });
+        
+        // Créer le portefeuille
+        await new Promise((resolve, reject) => {
+            db.run('INSERT INTO wallets (user_id, address, balance) VALUES (?, ?, ?)',
+                [userId, walletAddress, 1000],
+                function(err) {
+                    if (err) reject(err);
+                    resolve(this.lastID);
+                });
+        });
+        
+        // Ajouter des actifs par défaut
+        const assets = [
+            { symbol: 'BET', balance: 1000, usdValue: 1000 },
+            { symbol: 'BTC', balance: 0.05, usdValue: 2850 },
+            { symbol: 'ETH', balance: 0.8, usdValue: 2400 },
+            { symbol: 'USDT', balance: 500, usdValue: 500 }
+        ];
+        
+        for (const asset of assets) {
+            await new Promise((resolve, reject) => {
+                db.run('INSERT INTO assets (wallet_id, symbol, balance, usd_value) VALUES (?, ?, ?, ?)',
+                    [userId, asset.symbol, asset.balance, asset.usdValue],
+                    (err) => {
+                        if (err) reject(err);
+                        resolve();
+                    });
+            });
+        }
+        
+        const token = jwt.sign(
+            { id: userId, email },
+            process.env.JWT_SECRET || 'betwallet_secret',
+            { expiresIn: '7d' }
+        );
+        
+        res.status(201).json({
+            success: true,
+            token,
+            user: { id: userId, username, email, walletAddress }
+        });
+    } catch (error) {
+        console.error('Erreur register:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    
-    res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
-// ==================== DÉMARRAGE ====================
+// Connexion
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        const user = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+                if (err) reject(err);
+                resolve(row);
+            });
+        });
+        
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
+        }
+        
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
+        }
+        
+        const token = jwt.sign(
+            { id: user.id, email },
+            process.env.JWT_SECRET || 'betwallet_secret',
+            { expiresIn: '7d' }
+        );
+        
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                walletAddress: user.wallet_address
+            }
+        });
+    } catch (error) {
+        console.error('Erreur login:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+});
+
+// Dashboard
+app.get('/api/wallet/dashboard', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ success: false, error: 'Non autorisé' });
+        }
+        
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'betwallet_secret');
+        const userId = decoded.id;
+        
+        const assets = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM assets WHERE wallet_id = ?', [userId], (err, rows) => {
+                if (err) reject(err);
+                resolve(rows || []);
+            });
+        });
+        
+        const totalBalance = assets.reduce((sum, a) => sum + (a.usd_value || 0), 0);
+        
+        res.json({
+            success: true,
+            dashboard: {
+                totalBalance: totalBalance,
+                betBalance: assets.find(a => a.symbol === 'BET')?.balance || 0,
+                assets: assets,
+                recentTransactions: [],
+                chartData: {
+                    labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+                    values: [totalBalance * 0.95, totalBalance * 0.97, totalBalance * 0.96, totalBalance * 0.98, totalBalance * 0.99, totalBalance * 0.98, totalBalance]
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur dashboard:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+});
+
+// Page d'accueil
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+// Démarrage
 app.listen(PORT, () => {
-    console.log(`\n🚀 BetWallet API démarrée sur http://localhost:${PORT}`);
-    console.log('📋 Endpoints disponibles:');
-    console.log('   POST   /api/auth/register');
-    console.log('   POST   /api/auth/login');
-    console.log('   GET    /api/wallet/dashboard');
-    console.log('   GET    /api/wallet/balance');
-    console.log('   POST   /api/wallet/send\n');
+    console.log(`🚀 BetWallet API démarrée sur http://localhost:${PORT}`);
 });
