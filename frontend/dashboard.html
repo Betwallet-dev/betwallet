@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetWallet - Tableau de bord</title>
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">🎲 Bet<span>Wallet</span></div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="overview">
+                    <span class="nav-icon">📊</span> Aperçu
+                </a>
+                <a href="#" class="nav-item" data-page="assets">
+                    <span class="nav-icon">💰</span> Actifs
+                </a>
+                <a href="#" class="nav-item" data-page="transactions">
+                    <span class="nav-icon">📜</span> Transactions
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span> Paramètres
+                </a>
+            </nav>
+            <button id="logoutBtn" class="logout-btn">🔓 Déconnexion</button>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="user-info">
+                    <div class="wallet-address" id="walletAddress">Chargement...</div>
+                    <div class="username" id="username"></div>
+                </div>
+            </header>
+
+            <div id="overviewPage" class="page active">
+                <div class="balance-card">
+                    <div class="balance-label">SOLDE TOTAL</div>
+                    <div class="balance-amount" id="totalBalance">$0</div>
+                    <div class="balance-bet" id="betBalance">0 BET</div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="openSendModal()">⬆️ Envoyer</button>
+                        <button class="btn-secondary" onclick="openReceiveModal()">⬇️ Recevoir</button>
+                        <button class="btn-secondary" onclick="refreshDashboard()">🔄 Actualiser</button>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Évolution du portefeuille</h3>
+                    <canvas id="portfolioChart" height="300"></canvas>
+                </div>
+
+                <div class="assets-summary">
+                    <h3>Vos actifs</h3>
+                    <div class="assets-list" id="assetsList"></div>
+                </div>
+
+                <div class="transactions-preview">
+                    <h3>Dernières transactions</h3>
+                    <div id="recentTransactions"></div>
+                </div>
+            </div>
+
+            <div id="assetsPage" class="page">
+                <h2>📦 Tous vos actifs</h2>
+                <div class="assets-grid" id="assetsGrid"></div>
+            </div>
+
+            <div id="transactionsPage" class="page">
+                <h2>📋 Historique complet</h2>
+                <div id="allTransactions"></div>
+            </div>
+
+            <div id="settingsPage" class="page">
+                <h2>⚙️ Paramètres du compte</h2>
+                <div class="settings-card">
+                    <h3>Profil</h3>
+                    <div class="setting-item">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="settingsUsername" readonly>
+                    </div>
+                    <div class="setting-item">
+                        <label>Email</label>
+                        <input type="email" id="settingsEmail" readonly>
+                    </div>
+                    <div class="setting-item">
+                        <label>Adresse du portefeuille</label>
+                        <input type="text" id="settingsWalletAddress" readonly>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="sendModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sendModal')">&times;</span>
+            <h2>Envoyer des BET</h2>
+            <form id="sendForm">
+                <div class="input-group">
+                    <label>Adresse destinataire</label>
+                    <input type="text" id="sendTo" placeholder="BetWallet_..." required>
+                </div>
+                <div class="input-group">
+                    <label>Montant (BET)</label>
+                    <input type="number" id="sendAmount" step="0.01" min="0.01" required>
+                </div>
+                <button type="submit" class="btn-primary">Confirmer l'envoi</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="receiveModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('receiveModal')">&times;</span>
+            <h2>Recevoir des fonds</h2>
+            <div class="receive-info">
+                <p>Votre adresse BetWallet :</p>
+                <div class="wallet-address-large" id="receiveAddress"></div>
+                <button class="btn-secondary" onclick="copyAddress()">📋 Copier l'adresse</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/dashboard.js"></script>
+</body>
+</html>
