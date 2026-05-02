@@ -1,12 +1,8 @@
 {
   "name": "betwallet-api",
   "version": "1.0.0",
-  "description": "BetWallet API - Cryptocurrency Wallet Backend",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "postinstall": "npm rebuild sqlite3 --build-from-source"
-  },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
@@ -14,12 +10,6 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1",
-    "sqlite3": "^5.1.6"
-  },
-  "keywords": ["wallet", "cryptocurrency", "betwallet"],
-  "author": "BetWallet",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
+    "pg": "^8.11.3"
   }
 }
