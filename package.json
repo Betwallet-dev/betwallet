@@ -1,6 +1,7 @@
 {
   "name": "betwallet-api",
   "version": "1.0.0",
+  "description": "BetWallet API - Cryptocurrency Wallet Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -13,5 +14,8 @@
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1",
     "better-sqlite3": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
