@@ -1,7 +1,8 @@
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api' 
-    : 'https://betwallet-api.onrender.com/api';
-console.log('🔗 API URL:', API_URL); // Ajoutez cette ligne pour déboguer
+const API_URL = 'https://betwallet-api-2024.onrender.com/api';
+
+console.log('🔗 BetWallet API URL:', API_URL);
+
+let portfolioChart = null;
 
 // Vérifier l'authentification
 const token = localStorage.getItem('token');
@@ -33,6 +34,8 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 // Charger les données du dashboard
 async function loadDashboard() {
     try {
+        console.log('Chargement du dashboard...');
+        
         const response = await fetch(`${API_URL}/wallet/dashboard`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -54,10 +57,12 @@ async function loadDashboard() {
             renderTransactions(data.dashboard.recentTransactions);
             renderAllTransactions(data.dashboard.assets[0]?.transactions || []);
             initChart(data.dashboard.chartData);
+        } else {
+            alert('Erreur de chargement des données');
         }
     } catch (error) {
         console.error('Erreur chargement dashboard:', error);
-        alert('Erreur de chargement des données');
+        alert('Erreur de connexion au serveur');
     }
 }
 
@@ -74,8 +79,8 @@ function renderAssets(assets) {
         </div>
     `).join('');
     
-    assetsList.innerHTML = html;
-    assetsGrid.innerHTML = html;
+    if (assetsList) assetsList.innerHTML = html;
+    if (assetsGrid) assetsGrid.innerHTML = html;
 }
 
 function renderTransactions(transactions) {
@@ -123,7 +128,9 @@ function renderAllTransactions(transactions) {
 }
 
 function initChart(chartData) {
-    const ctx = document.getElementById('portfolioChart').getContext('2d');
+    const ctx = document.getElementById('portfolioChart');
+    if (!ctx) return;
+    
     if (portfolioChart) portfolioChart.destroy();
     
     portfolioChart = new Chart(ctx, {
@@ -169,11 +176,6 @@ function initChart(chartData) {
                     grid: { color: '#1f2648' },
                     ticks: { color: '#9ca3af' }
                 }
-            },
-            interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
             }
         }
     });
@@ -195,7 +197,7 @@ function closeModal(modalId) {
 }
 
 // Envoi de transaction
-document.getElementById('sendForm').addEventListener('submit', async (e) => {
+document.getElementById('sendForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const to = document.getElementById('sendTo').value;
@@ -222,7 +224,7 @@ document.getElementById('sendForm').addEventListener('submit', async (e) => {
             alert('Transaction envoyée avec succès !');
             closeModal('sendModal');
             document.getElementById('sendForm').reset();
-            loadDashboard(); // Recharger les données
+            loadDashboard();
         } else {
             alert(data.error || 'Erreur lors de l\'envoi');
         }
@@ -232,7 +234,6 @@ document.getElementById('sendForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Copier l'adresse
 function copyAddress() {
     const address = document.getElementById('receiveAddress').textContent;
     navigator.clipboard.writeText(address);
@@ -243,7 +244,7 @@ function refreshDashboard() {
     loadDashboard();
 }
 
-// Fermer les modals en cliquant en dehors
+// Fermer les modals
 window.onclick = (event) => {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';

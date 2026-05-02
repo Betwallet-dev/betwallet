@@ -1,7 +1,6 @@
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api' 
-    : 'https://betwallet-api.onrender.com/api';
-console.log('🔗 API URL:', API_URL); // Ajoutez cette ligne pour déboguer
+const API_URL = 'https://betwallet-api-2024.onrender.com/api';
+
+console.log('🔗 BetWallet API URL:', API_URL);
 
 function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -15,40 +14,6 @@ function switchTab(tab) {
         document.getElementById('registerForm').classList.add('active');
     }
 }
-
-// Gestion de la connexion
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) {
-        alert('Veuillez remplir tous les champs');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            window.location.href = 'dashboard.html';
-        } else {
-            alert(data.error || 'Erreur de connexion');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        alert('Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
-    }
-});
 
 // Gestion de l'inscription
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -75,6 +40,8 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     }
 
     try {
+        console.log('Inscription en cours...');
+        
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -82,6 +49,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
         });
         
         const data = await response.json();
+        console.log('Réponse:', data);
         
         if (data.success) {
             localStorage.setItem('token', data.token);
@@ -92,6 +60,43 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert('Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
+        alert('Erreur de connexion au serveur. Vérifiez que l\'API est accessible.');
+    }
+});
+
+// Gestion de la connexion
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+
+    try {
+        console.log('Connexion en cours...');
+        
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        console.log('Réponse:', data);
+        
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            window.location.href = 'dashboard.html';
+        } else {
+            alert(data.error || 'Erreur de connexion');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur de connexion au serveur. Vérifiez que l\'API est accessible.');
     }
 });
