@@ -2,36 +2,33 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
-// Initialisation de la base de données - CHEMIN CORRIGÉ
-const possiblePaths = [
-    path.join(__dirname, 'backend', 'src', 'database', 'init.js'),
-    path.join(__dirname, 'src', 'database', 'init.js')
-];
-
+// Initialisation de la base de données - VERSION SIMPLIFIÉE
 let db;
-let initPathFound = null;
-for (const p of possiblePaths) {
-    try {
-        if (require.resolve(p)) {
-            db = require(p);
-            initPathFound = p;
-            break;
-        }
-    } catch (e) {
-        // Ignorer
-    }
-}
+const sqlite3 = require('sqlite3').verbose();
 
-if (!db) {
-    console.error('❌ Fichier init.js introuvable. Chemins cherchés:', possiblePaths);
+// Chercher le fichier init.js de manière simple
+let initPath = path.join(__dirname, 'backend', 'src', 'database', 'init.js');
+
+console.log('🔍 Recherche du fichier init.js à:', initPath);
+
+if (!fs.existsSync(initPath)) {
+    console.error('❌ Fichier init.js introuvable à:', initPath);
     process.exit(1);
 }
-console.log(`✅ Base de données chargée depuis: ${initPathFound}`);
+
+try {
+    db = require(initPath);
+    console.log('✅ Base de données chargée');
+} catch (err) {
+    console.error('❌ Erreur chargement base de données:', err.message);
+    process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,12 +42,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir le frontend (pour Render)
+// Servir le frontend
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ==================== ROUTES ====================
 
-// Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API is running' });
 });
@@ -64,7 +60,6 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
         }
         
-        // Vérifier si l'utilisateur existe
         const existingUser = await new Promise((resolve, reject) => {
             db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
                 if (err) reject(err);
@@ -79,7 +74,6 @@ app.post('/api/auth/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const walletAddress = `BetWallet_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         
-        // Créer l'utilisateur
         const userId = await new Promise((resolve, reject) => {
             db.run('INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)',
                 [username, email, hashedPassword, walletAddress],
@@ -89,17 +83,15 @@ app.post('/api/auth/register', async (req, res) => {
                 });
         });
         
-        // Créer le portefeuille
         await new Promise((resolve, reject) => {
             db.run('INSERT INTO wallets (user_id, address, balance) VALUES (?, ?, ?)',
                 [userId, walletAddress, 1000],
                 function(err) {
                     if (err) reject(err);
-                    resolve(this.lastID);
+                    resolve();
                 });
         });
         
-        // Ajouter des actifs par défaut
         const assets = [
             { symbol: 'BET', balance: 1000, usdValue: 1000 },
             { symbol: 'BTC', balance: 0.05, usdValue: 2850 },
@@ -203,7 +195,7 @@ app.get('/api/wallet/dashboard', async (req, res) => {
             dashboard: {
                 totalBalance: totalBalance,
                 betBalance: assets.find(a => a.symbol === 'BET')?.balance || 0,
-                assets: assets,
+                assets: assets.map(a => ({ ...a, name: a.symbol, icon: '💰' })),
                 recentTransactions: [],
                 chartData: {
                     labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
@@ -217,12 +209,10 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     }
 });
 
-// Page d'accueil
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-// Démarrage
 app.listen(PORT, () => {
     console.log(`🚀 BetWallet API démarrée sur http://localhost:${PORT}`);
 });
