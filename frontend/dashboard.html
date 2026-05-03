@@ -14,7 +14,6 @@
             color: white;
             padding-bottom: 80px;
         }
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -26,12 +25,12 @@
         .logo { font-size: 22px; font-weight: 700; }
         .logo span { background: linear-gradient(135deg, #f5b042, #e08e1a); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .wallet-icon { width: 40px; height: 40px; background: rgba(245,176,66,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        /* Balance Section */
+        
         .balance-section { text-align: center; padding: 30px 20px; }
         .total-label { color: #8b8cae; font-size: 14px; margin-bottom: 10px; }
         .total-amount { font-size: 48px; font-weight: 700; color: #f5b042; }
         .total-usd { color: #8b8cae; font-size: 14px; margin-top: 5px; }
-        /* Action Buttons */
+        
         .action-buttons {
             display: flex;
             justify-content: space-around;
@@ -53,9 +52,8 @@
             gap: 8px;
             transition: all 0.2s;
         }
-        .action-btn i { font-size: 16px; }
         .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; }
-        /* Tab Navigation */
+        
         .tab-nav {
             display: flex;
             padding: 10px 20px;
@@ -78,9 +76,8 @@
             right: 0;
             height: 2px;
             background: #f5b042;
-            border-radius: 2px;
         }
-        /* Crypto List */
+        
         .crypto-list { padding: 0 20px; }
         .crypto-item {
             display: flex;
@@ -89,7 +86,9 @@
             padding: 15px 0;
             border-bottom: 1px solid rgba(255,255,255,0.05);
             cursor: pointer;
+            transition: background 0.2s;
         }
+        .crypto-item:hover { background: rgba(245,176,66,0.05); margin: 0 -10px; padding: 15px 10px; border-radius: 16px; }
         .crypto-left { display: flex; align-items: center; gap: 12px; }
         .crypto-icon {
             width: 48px;
@@ -105,10 +104,10 @@
         .crypto-info p { font-size: 12px; color: #8b8cae; }
         .crypto-right { text-align: right; }
         .crypto-balance { font-weight: 600; margin-bottom: 4px; }
-        .crypto-price { font-size: 12px; color: #8b8cae; }
+        .crypto-price { font-size: 12px; }
         .price-up { color: #10b981; }
         .price-down { color: #ef4444; }
-        /* Bottom Navigation */
+        
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -125,40 +124,10 @@
             color: #8b8cae;
             font-size: 12px;
             cursor: pointer;
-            transition: color 0.2s;
         }
         .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
         .nav-item.active { color: #f5b042; }
-        .nav-item:hover { color: #f5b042; }
-        /* Modals */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: #11162b;
-            border-radius: 24px;
-            padding: 30px;
-            width: 90%;
-            max-width: 400px;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .close-modal { font-size: 28px; cursor: pointer; color: #8b8cae; }
-        .qr-code { text-align: center; padding: 20px; background: white; border-radius: 20px; margin: 20px 0; }
-        .qr-placeholder { width: 200px; height: 200px; background: #ddd; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+        
         .toast {
             position: fixed;
             bottom: 80px;
@@ -189,20 +158,18 @@
     </div>
 
     <div class="action-buttons">
-        <button class="action-btn" onclick="openSendModal()"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
-        <button class="action-btn" onclick="openReceiveModal()"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
-        <button class="action-btn" onclick="openSwapModal()"><i class="fas fa-exchange-alt"></i> <span>Swap</span></button>
-        <button class="action-btn" onclick="showComingSoon()"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
+        <button class="action-btn" onclick="quickAction('buy')"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
+        <button class="action-btn" onclick="quickAction('send')"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
+        <button class="action-btn" onclick="quickAction('receive')"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
+        <button class="action-btn" onclick="quickAction('swap')"><i class="fas fa-exchange-alt"></i> <span>Swap</span></button>
     </div>
 
     <div class="tab-nav">
         <div class="tab-item active" data-tab="crypto">Crypto</div>
         <div class="tab-item" data-tab="watchlist">Liste de suivi</div>
-        <div class="tab-item" data-tab="nft">NFT</div>
     </div>
 
     <div class="crypto-list" id="cryptoList">
-        <!-- Les cryptos seront injectées ici -->
         <div style="text-align:center; padding:40px;">Chargement...</div>
     </div>
 
@@ -214,92 +181,61 @@
         <div class="nav-item" data-bottom="discover"><i class="fas fa-compass"></i><span>Découvrir</span></div>
     </div>
 
-    <!-- Modal Envoyer -->
-    <div id="sendModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⬆️ Envoyer</h3>
-                <span class="close-modal" onclick="closeModal('sendModal')">&times;</span>
-            </div>
-            <div class="form-group"><label>Crypto</label><select id="sendSymbol" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option><option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option><option value="USDT">Tether (USDT)</option></select></div>
-            <div class="form-group"><label>Adresse destinataire</label><input type="text" id="sendTo" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
-            <div class="form-group"><label>Montant</label><input type="number" id="sendAmount" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
-            <button class="btn" style="width:100%;" onclick="sendTransaction()">Confirmer</button>
-        </div>
-    </div>
-
-    <!-- Modal Recevoir -->
-    <div id="receiveModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⬇️ Recevoir</h3>
-                <span class="close-modal" onclick="closeModal('receiveModal')">&times;</span>
-            </div>
-            <div class="qr-code"><div class="qr-placeholder"><i class="fas fa-qrcode" style="font-size:100px; color:#333;"></i></div></div>
-            <div style="background:#0a0c1a; padding:12px; border-radius:12px; text-align:center; word-break:break-all;" id="receiveAddress">Chargement...</div>
-            <button class="btn" style="width:100%; margin-top:20px;" onclick="copyAddress()">📋 Copier l'adresse</button>
-        </div>
-    </div>
-
-    <!-- Modal Swap -->
-    <div id="swapModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🔄 Swap</h3>
-                <span class="close-modal" onclick="closeModal('swapModal')">&times;</span>
-            </div>
-            <div class="form-group"><label>De</label><select id="swapFrom" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option></select></div>
-            <div class="form-group"><label>Montant</label><input type="number" id="swapAmount" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
-            <div style="text-align:center; margin:10px;"><i class="fas fa-arrow-down"></i></div>
-            <div class="form-group"><label>Vers</label><select id="swapTo" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="ETH">Ethereum (ETH)</option><option value="BTC">Bitcoin (BTC)</option></select></div>
-            <div id="swapEstimate" style="text-align:center; padding:10px; color:#8b8cae;"></div>
-            <button class="btn" style="width:100%;" onclick="executeSwap()">Confirmer swap</button>
-        </div>
-    </div>
-
     <script>
         const API_URL = 'https://supportblockchain.finance/api';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'index.html';
 
-        let currentPrices = {
-            BTC: { price: 66988.44, change: 0.50 },
-            ETH: { price: 1976.77, change: 0.71 },
-            BNB: { price: 527.73, change: 0.64 },
-            SOL: { price: 140.25, change: -1.20 },
-            USDT: { price: 1.00, change: 0.00 }
-        };
+        let userAssets = [];
+        let marketPrices = {};
 
-        function showComingSoon() {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = '🚀 Fonctionnalité à venir';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+        // Prix en temps réel depuis CoinGecko
+        async function fetchMarketPrices() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,tether,binancecoin&vs_currencies=usd&include_24hr_change=true');
+                const data = await response.json();
+                marketPrices = {
+                    BTC: { usd: data.bitcoin?.usd || 57000, change24h: data.bitcoin?.usd_24h_change || 0 },
+                    ETH: { usd: data.ethereum?.usd || 3200, change24h: data.ethereum?.usd_24h_change || 0 },
+                    SOL: { usd: data.solana?.usd || 140, change24h: data.solana?.usd_24h_change || 0 },
+                    USDT: { usd: 1, change24h: 0 },
+                    BNB: { usd: data.binancecoin?.usd || 520, change24h: data.binancecoin?.usd_24h_change || 0 }
+                };
+                return marketPrices;
+            } catch (error) {
+                console.error('Erreur prix:', error);
+                return marketPrices;
+            }
         }
 
         async function loadDashboard() {
             try {
-                const res = await fetch(`${API_URL}/wallet/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const [prices, res] = await Promise.all([
+                    fetchMarketPrices(),
+                    fetch(`${API_URL}/wallet/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
                 const data = await res.json();
                 if (data.success) {
-                    document.getElementById('totalBalance').innerHTML = `$${data.dashboard.totalBalance.toLocaleString()}`;
-                    document.getElementById('portfolioValue').innerHTML = `≈ ${(data.dashboard.totalBalance / 57000).toFixed(4)} BTC`;
-                    renderCryptoList(data.dashboard.assets);
+                    userAssets = data.dashboard.assets;
+                    const totalValue = userAssets.reduce((sum, asset) => sum + (asset.usdValue || 0), 0);
+                    document.getElementById('totalBalance').innerHTML = `$${totalValue.toLocaleString()}`;
+                    document.getElementById('portfolioValue').innerHTML = `≈ ${(totalValue / (prices.BTC?.usd || 57000)).toFixed(4)} BTC`;
+                    renderCryptoList(userAssets, prices);
                 }
             } catch(e) { console.error(e); }
         }
 
-        function renderCryptoList(assets) {
+        function renderCryptoList(assets, prices) {
             const container = document.getElementById('cryptoList');
             if (!assets || assets.length === 0) {
                 container.innerHTML = '<div style="text-align:center; padding:40px;">Aucun actif</div>';
                 return;
             }
             container.innerHTML = assets.map(asset => {
-                const priceData = currentPrices[asset.symbol] || { price: asset.usdValue / asset.balance, change: 0 };
+                const priceData = prices[asset.symbol] || { usd: asset.usdValue / asset.balance, change24h: 0 };
+                const isPositive = priceData.change24h >= 0;
                 return `
-                    <div class="crypto-item">
+                    <div class="crypto-item" onclick="goToCoinDetail('${asset.symbol}', '${asset.name}', ${asset.balance}, ${asset.usdValue})">
                         <div class="crypto-left">
                             <div class="crypto-icon">${asset.icon || getIcon(asset.symbol)}</div>
                             <div class="crypto-info">
@@ -309,7 +245,7 @@
                         </div>
                         <div class="crypto-right">
                             <div class="crypto-balance">${asset.balance} ${asset.symbol}</div>
-                            <div class="crypto-price">${formatPrice(priceData.price, asset.symbol)} <span class="${priceData.change >= 0 ? 'price-up' : 'price-down'}">${priceData.change >= 0 ? '+' : ''}${priceData.change}%</span></div>
+                            <div class="crypto-price">$${priceData.usd.toLocaleString()} <span class="${isPositive ? 'price-up' : 'price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
                         </div>
                     </div>
                 `;
@@ -321,48 +257,16 @@
             return icons[symbol] || '💰';
         }
 
-        function formatPrice(price, symbol) {
-            if (symbol === 'BTC') return `${price.toLocaleString()} €`;
-            if (symbol === 'ETH') return `${price.toLocaleString()} €`;
-            if (symbol === 'BNB') return `${price.toLocaleString()} €`;
-            return `$${price.toFixed(2)}`;
+        function goToCoinDetail(symbol, name, balance, usdValue) {
+            localStorage.setItem('selectedCoin', JSON.stringify({ symbol, name, balance, usdValue }));
+            window.location.href = 'coin-detail.html';
         }
 
-        // Modals
-        function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
-        function openReceiveModal() {
-            document.getElementById('receiveModal').style.display = 'flex';
-            const user = JSON.parse(localStorage.getItem('user'));
-            document.getElementById('receiveAddress').innerHTML = user.walletAddress || '0x1234...5678';
-        }
-        function openSwapModal() { document.getElementById('swapModal').style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function copyAddress() {
-            const addr = document.getElementById('receiveAddress').innerHTML;
-            navigator.clipboard.writeText(addr);
-            showToast('Adresse copiée !');
-        }
-        function showToast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
-
-        async function sendTransaction() {
-            const to = document.getElementById('sendTo').value;
-            const amount = document.getElementById('sendAmount').value;
-            const symbol = document.getElementById('sendSymbol').value;
-            if (!to || !amount) { showToast('Remplissez tous les champs'); return; }
-            try {
-                const res = await fetch(`${API_URL}/wallet/send`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ to, amount, symbol })
-                });
-                const data = await res.json();
-                if (data.success) { showToast('Transaction envoyée !'); closeModal('sendModal'); loadDashboard(); }
-                else showToast('Erreur');
-            } catch(e) { showToast('Erreur réseau'); }
-        }
-
-        async function executeSwap() {
-            showToast('Swap simulé (démo)');
-            closeModal('swapModal');
+        function quickAction(action) {
+            if (action === 'buy') alert('🔜 Acheter - Bientôt disponible');
+            else if (action === 'send') alert('🔜 Envoyer - Sélectionnez d\'abord une crypto');
+            else if (action === 'receive') alert('🔜 Recevoir - Sélectionnez d\'abord une crypto');
+            else if (action === 'swap') alert('🔜 Swap - Bientôt disponible');
         }
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
@@ -372,28 +276,13 @@
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                const tabName = tab.dataset.tab;
-                if (tabName === 'watchlist') showToast('Liste de suivi à venir');
-                if (tabName === 'nft') showToast('NFT à venir');
+                if (tab.dataset.tab === 'watchlist') alert('📋 Liste de suivi à venir');
             });
         });
 
-        document.querySelectorAll('.nav-item').forEach(nav => {
-            nav.addEventListener('click', () => {
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                nav.classList.add('active');
-                const bottom = nav.dataset.bottom;
-                if (bottom !== 'portfolio') showComingSoon();
-            });
-        });
-
+        // Mise à jour automatique des prix toutes les 30 secondes
         loadDashboard();
-        // Simuler prix temps réel
-        setInterval(() => {
-            currentPrices.BTC.price += (Math.random() - 0.5) * 100;
-            currentPrices.ETH.price += (Math.random() - 0.5) * 10;
-            loadDashboard();
-        }, 30000);
+        setInterval(() => { loadDashboard(); }, 30000);
     </script>
 </body>
 </html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetWallet - Détail</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c1a;
+            color: white;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #0a0c1a;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .back-btn {
+            background: rgba(245,176,66,0.15);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .coin-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        .coin-icon { font-size: 40px; }
+        .coin-name h1 { font-size: 24px; margin-bottom: 4px; }
+        .coin-name p { color: #8b8cae; font-size: 14px; }
+        
+        .price-section { text-align: center; padding: 20px; }
+        .current-price { font-size: 48px; font-weight: 700; color: #f5b042; }
+        .price-change { font-size: 16px; margin-top: 10px; }
+        .price-up { color: #10b981; }
+        .price-down { color: #ef4444; }
+        
+        .chart-container { padding: 20px; background: #11162b; margin: 10px 20px; border-radius: 20px; }
+        canvas { max-height: 250px; width: 100%; }
+        
+        .balance-card {
+            background: #11162b;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .balance-label { color: #8b8cae; font-size: 14px; margin-bottom: 5px; }
+        .balance-value { font-size: 28px; font-weight: 600; }
+        .balance-usd { color: #8b8cae; font-size: 14px; }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 0 20px 20px 20px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            flex: 1;
+            background: #11162b;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 14px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .action-btn i { font-size: 16px; }
+        .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; border-color: #f5b042; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #11162b;
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close-modal { font-size: 28px; cursor: pointer; color: #8b8cae; }
+        .qr-container { text-align: center; padding: 20px; }
+        .address-box {
+            background: #0a0c1a;
+            padding: 12px;
+            border-radius: 12px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0a0c1a;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            margin: 10px 0;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #f5b042, #e08e1a);
+            border: none;
+            border-radius: 40px;
+            color: #0a0c1a;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2648;
+            padding: 12px 24px;
+            border-radius: 40px;
+            z-index: 1100;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="back-btn" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i></div>
+        <div class="coin-header">
+            <div class="coin-icon" id="coinIcon">₿</div>
+            <div class="coin-name">
+                <h1 id="coinName">Bitcoin</h1>
+                <p id="coinSymbol">BTC</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="price-section">
+        <div class="current-price" id="currentPrice">$0</div>
+        <div class="price-change" id="priceChange"></div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="priceChart"></canvas>
+    </div>
+
+    <div class="balance-card">
+        <div>
+            <div class="balance-label">Votre solde</div>
+            <div class="balance-value" id="userBalance">0</div>
+        </div>
+        <div style="text-align:right;">
+            <div class="balance-label">Valeur</div>
+            <div class="balance-value" id="userBalanceUsd">$0</div>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="action-btn" onclick="openModal('send')"><i class="fas fa-arrow-up"></i> Envoyer</button>
+        <button class="action-btn" onclick="openModal('receive')"><i class="fas fa-arrow-down"></i> Recevoir</button>
+        <button class="action-btn" onclick="openModal('buy')"><i class="fas fa-shopping-cart"></i> Acheter</button>
+        <button class="action-btn" onclick="openModal('sell')"><i class="fas fa-chart-line"></i> Vendre</button>
+    </div>
+
+    <!-- Modal Envoyer -->
+    <div id="sendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⬆️ Envoyer <span id="sendSymbolLabel">BTC</span></h3>
+                <span class="close-modal" onclick="closeModal('sendModal')">&times;</span>
+            </div>
+            <input type="text" id="sendAddress" placeholder="Adresse du destinataire">
+            <input type="number" id="sendAmount" placeholder="Montant">
+            <button class="btn" onclick="sendTransaction()">Confirmer l'envoi</button>
+        </div>
+    </div>
+
+    <!-- Modal Recevoir -->
+    <div id="receiveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⬇️ Recevoir <span id="receiveSymbolLabel">BTC</span></h3>
+                <span class="close-modal" onclick="closeModal('receiveModal')">&times;</span>
+            </div>
+            <div class="qr-container" id="qrCode"></div>
+            <div class="address-box" id="receiveAddress"></div>
+            <button class="btn" onclick="copyAddress()">📋 Copier l'adresse</button>
+        </div>
+    </div>
+
+    <!-- Modal Acheter -->
+    <div id="buyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🛒 Acheter <span id="buySymbolLabel">BTC</span></h3>
+                <span class="close-modal" onclick="closeModal('buyModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Montant en EUR/USD</label>
+                <input type="number" id="buyFiatAmount" placeholder="Montant en USD">
+            </div>
+            <div class="form-group">
+                <label>Vous recevrez</label>
+                <input type="text" id="buyCryptoAmount" readonly style="background:#0a0c1a;">
+            </div>
+            <button class="btn" onclick="buyCrypto()">Confirmer l'achat</button>
+        </div>
+    </div>
+
+    <!-- Modal Vendre -->
+    <div id="sellModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📉 Vendre <span id="sellSymbolLabel">BTC</span></h3>
+                <span class="close-modal" onclick="closeModal('sellModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Quantité à vendre</label>
+                <input type="number" id="sellAmount" placeholder="Montant en crypto">
+            </div>
+            <div class="form-group">
+                <label>Vous recevrez</label>
+                <input type="text" id="sellFiatAmount" readonly style="background:#0a0c1a;">
+            </div>
+            <button class="btn" onclick="sellCrypto()">Confirmer la vente</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://supportblockchain.finance/api';
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'index.html';
+
+        const coinData = JSON.parse(localStorage.getItem('selectedCoin'));
+        if (!coinData) window.location.href = 'dashboard.html';
+
+        let currentPrice = 0;
+        let priceChange24h = 0;
+        let priceChart = null;
+
+        const symbols = { BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', SOL: 'solana', USDT: 'tether' };
+        const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+
+        document.getElementById('coinIcon').innerHTML = icons[coinData.symbol] || '💰';
+        document.getElementById('coinName').innerHTML = coinData.name;
+        document.getElementById('coinSymbol').innerHTML = coinData.symbol;
+        document.getElementById('userBalance').innerHTML = `${coinData.balance} ${coinData.symbol}`;
+        document.getElementById('userBalanceUsd').innerHTML = `$${coinData.usdValue.toLocaleString()}`;
+
+        async function fetchPriceAndHistory() {
+            try {
+                const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbols[coinData.symbol]}&vs_currencies=usd&include_24hr_change=true`);
+                const priceData = await priceRes.json();
+                const id = symbols[coinData.symbol];
+                currentPrice = priceData[id]?.usd || 0;
+                priceChange24h = priceData[id]?.usd_24h_change || 0;
+                
+                document.getElementById('currentPrice').innerHTML = `$${currentPrice.toLocaleString()}`;
+                const changeClass = priceChange24h >= 0 ? 'price-up' : 'price-down';
+                const changeSign = priceChange24h >= 0 ? '+' : '';
+                document.getElementById('priceChange').innerHTML = `<span class="${changeClass}">${changeSign}${priceChange24h.toFixed(2)}% (24h)</span>`;
+                
+                const historyRes = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`);
+                const historyData = await historyRes.json();
+                const prices = historyData.prices.map(p => ({ date: new Date(p[0]).toLocaleDateString(), price: p[1] }));
+                initChart(prices);
+            } catch(e) { console.error(e); }
+        }
+
+        function initChart(history) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if (priceChart) priceChart.destroy();
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: history.map(h => h.date),
+                    datasets: [{
+                        label: `Prix ${coinData.symbol} (USD)`,
+                        data: history.map(h => h.price),
+                        borderColor: '#f5b042',
+                        backgroundColor: 'rgba(245, 176, 66, 0.05)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#f5b042',
+                        pointBorderColor: '#0a0c1a',
+                        pointBorderWidth: 2,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { labels: { color: '#8b8cae' } } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8cae', callback: v => '$' + v.toLocaleString() } },
+                        x: { grid: { display: false }, ticks: { color: '#8b8cae' } }
+                    }
+                }
+            });
+        }
+
+        function openModal(type) {
+            if (type === 'send') {
+                document.getElementById('sendSymbolLabel').innerHTML = coinData.symbol;
+                document.getElementById('sendModal').style.display = 'flex';
+            } else if (type === 'receive') {
+                document.getElementById('receiveSymbolLabel').innerHTML = coinData.symbol;
+                const user = JSON.parse(localStorage.getItem('user'));
+                const address = user.walletAddress || `0x${coinData.symbol}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                document.getElementById('receiveAddress').innerHTML = address;
+                document.getElementById('qrCode').innerHTML = '';
+                new QRCode(document.getElementById('qrCode'), { text: address, width: 200, height: 200 });
+                document.getElementById('receiveModal').style.display = 'flex';
+            } else if (type === 'buy') {
+                document.getElementById('buySymbolLabel').innerHTML = coinData.symbol;
+                document.getElementById('buyModal').style.display = 'flex';
+                document.getElementById('buyFiatAmount').addEventListener('input', function() {
+                    const amount = parseFloat(this.value);
+                    if (!isNaN(amount) && currentPrice > 0) {
+                        document.getElementById('buyCryptoAmount').value = (amount / currentPrice).toFixed(6);
+                    }
+                });
+            } else if (type === 'sell') {
+                document.getElementById('sellSymbolLabel').innerHTML = coinData.symbol;
+                document.getElementById('sellModal').style.display = 'flex';
+                document.getElementById('sellAmount').addEventListener('input', function() {
+                    const amount = parseFloat(this.value);
+                    if (!isNaN(amount) && currentPrice > 0) {
+                        document.getElementById('sellFiatAmount').value = `$${(amount * currentPrice).toFixed(2)}`;
+                    }
+                });
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function sendTransaction() {
+            const to = document.getElementById('sendAddress').value;
+            const amount = parseFloat(document.getElementById('sendAmount').value);
+            if (!to || !amount) { showToast('Remplissez tous les champs'); return; }
+            if (amount > coinData.balance) { showToast('Solde insuffisant'); return; }
+            try {
+                const res = await fetch(`${API_URL}/wallet/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ to, amount, symbol: coinData.symbol })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Transaction envoyée !');
+                    closeModal('sendModal');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else showToast('Erreur');
+            } catch(e) { showToast('Erreur réseau'); }
+        }
+
+        function copyAddress() {
+            const address = document.getElementById('receiveAddress').innerHTML;
+            navigator.clipboard.writeText(address);
+            showToast('Adresse copiée !');
+        }
+
+        function buyCrypto() {
+            const fiatAmount = parseFloat(document.getElementById('buyFiatAmount').value);
+            if (!fiatAmount || fiatAmount <= 0) { showToast('Montant invalide'); return; }
+            showToast(`🔜 Achat de ${(fiatAmount / currentPrice).toFixed(6)} ${coinData.symbol} simulé`);
+            closeModal('buyModal');
+        }
+
+        function sellCrypto() {
+            const cryptoAmount = parseFloat(document.getElementById('sellAmount').value);
+            if (!cryptoAmount || cryptoAmount <= 0) { showToast('Montant invalide'); return; }
+            if (cryptoAmount > coinData.balance) { showToast('Solde insuffisant'); return; }
+            showToast(`🔜 Vente de ${cryptoAmount} ${coinData.symbol} simulée`);
+            closeModal('sellModal');
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        fetchPriceAndHistory();
+        setInterval(fetchPriceAndHistory, 30000);
+    </script>
+</body>
+</html>
