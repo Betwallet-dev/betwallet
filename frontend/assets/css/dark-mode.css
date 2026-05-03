@@ -1,0 +1,60 @@
+:root {
+    --bg-primary: #0a0c1a;
+    --bg-secondary: #11162b;
+    --text-primary: #eef2ff;
+    --text-secondary: #9ca3af;
+    --accent: #f5b042;
+    --success: #10b981;
+    --danger: #ef4444;
+    --border: #1f2648;
+}
+
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #f59e0b;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.theme-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.price-change.positive { color: var(--success); }
+.price-change.negative { color: var(--danger); }
+
+.swap-estimate {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+.swap-arrow {
+    text-align: center;
+    font-size: 24px;
+    margin: 10px 0;
+}
