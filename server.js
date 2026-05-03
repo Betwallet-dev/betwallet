@@ -16,11 +16,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Base de données
+// ==================== BASE DE DONNÉES ====================
 const dbPath = path.join(__dirname, 'betwallet.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
+    // Table users
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
@@ -33,6 +34,7 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     
+    // Table wallets
     db.run(`CREATE TABLE IF NOT EXISTS wallets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER UNIQUE NOT NULL,
@@ -41,6 +43,7 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     
+    // Table assets
     db.run(`CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -50,7 +53,7 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     
-    // Créer le compte admin
+    // Créer le compte admin par défaut
     db.get('SELECT id FROM users WHERE email = ?', ['admin@betwallet.com'], async (err, row) => {
         if (!row) {
             const hashedPassword = await bcrypt.hash('Admin123!', 10);
@@ -58,6 +61,8 @@ db.serialize(() => {
             db.run(`INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)`,
                 ['Administrateur', 'admin@betwallet.com', hashedPassword, walletAddress]);
             console.log('✅ Compte admin créé: admin@betwallet.com / Admin123!');
+        } else {
+            console.log('✅ Compte admin existant');
         }
     });
     
@@ -88,6 +93,7 @@ app.post('/api/admin/login', async (req, res) => {
         
         res.json({ success: true, token: 'admin_secret_token_2024' });
     } catch (error) {
+        console.error('Erreur login admin:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
@@ -110,22 +116,31 @@ app.get('/api/admin/users', (req, res) => {
     db.all('SELECT id, username, email, wallet_address, total_balance, created_at FROM users WHERE email != ? ORDER BY id DESC', 
         ['admin@betwallet.com'], 
         (err, users) => {
+            if (err) {
+                return res.status(500).json({ success: false });
+            }
             res.json({ success: true, users: users || [] });
         });
 });
 
 // ==================== ROUTES UTILISATEURS ====================
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK' });
+    res.json({ status: 'OK', message: 'BetWallet API running' });
 });
 
+// Inscription
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         
+        if (!username || !email || !password) {
+            return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
+        }
+        
         const existing = await new Promise((resolve) => {
             db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => resolve(row));
         });
+        
         if (existing) {
             return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
         }
@@ -145,11 +160,11 @@ app.post('/api/auth/register', async (req, res) => {
         });
         
         const defaultAssets = [
-            { symbol: 'BTC', balance: 0.05, usdValue: 2850 },
-            { symbol: 'ETH', balance: 0.8, usdValue: 2400 },
-            { symbol: 'BNB', balance: 2.5, usdValue: 1320 },
-            { symbol: 'SOL', balance: 10, usdValue: 1400 },
-            { symbol: 'USDT', balance: 500, usdValue: 500 }
+            { symbol: 'BTC', name: 'Bitcoin', balance: 0.05, usdValue: 2850 },
+            { symbol: 'ETH', name: 'Ethereum', balance: 0.8, usdValue: 2400 },
+            { symbol: 'BNB', name: 'BNB Smart Chain', balance: 2.5, usdValue: 1320 },
+            { symbol: 'SOL', name: 'Solana', balance: 10, usdValue: 1400 },
+            { symbol: 'USDT', name: 'Tether', balance: 500, usdValue: 500 }
         ];
         
         let totalBalance = 0;
@@ -157,9 +172,8 @@ app.post('/api/auth/register', async (req, res) => {
             totalBalance += asset.usdValue;
             await new Promise((resolve, reject) => {
                 db.run(`INSERT INTO assets (user_id, symbol, balance, usd_value) VALUES (?, ?, ?, ?)`,
-                    [userId, asset.symbol, asset.balance, asset.usdValue], (err) => {
-                    if (err) reject(err); else resolve();
-                });
+                    [userId, asset.symbol, asset.balance, asset.usdValue],
+                    (err) => { if (err) reject(err); else resolve(); });
             });
         }
         
@@ -170,12 +184,19 @@ app.post('/api/auth/register', async (req, res) => {
         });
         
         const token = `token_${userId}_${Date.now()}`;
-        res.json({ success: true, token, user: { id: userId, username, email, walletAddress } });
+        
+        res.json({
+            success: true,
+            token,
+            user: { id: userId, username, email, walletAddress }
+        });
     } catch (error) {
+        console.error('Erreur inscription:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
 
+// Connexion
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -194,15 +215,28 @@ app.post('/api/auth/login', async (req, res) => {
         }
         
         const token = `token_${user.id}_${Date.now()}`;
-        res.json({ success: true, token, user: { id: user.id, username: user.username, email: user.email, walletAddress: user.wallet_address } });
+        
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                walletAddress: user.wallet_address
+            }
+        });
     } catch (error) {
+        console.error('Erreur connexion:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
 
+// Mot de passe oublié - Demander un reset
 app.post('/api/auth/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
+        
         const user = await new Promise((resolve) => {
             db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => resolve(row));
         });
@@ -212,47 +246,55 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         }
         
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpires = new Date(Date.now() + 3600000);
+        const resetTokenExpires = new Date(Date.now() + 3600000); // 1 heure
+        
         await new Promise((resolve, reject) => {
             db.run(`UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?`,
-                [resetToken, resetTokenExpires.toISOString(), user.id], (err) => {
-                if (err) reject(err); else resolve();
-            });
+                [resetToken, resetTokenExpires.toISOString(), user.id],
+                (err) => { if (err) reject(err); else resolve(); });
         });
         
         res.json({ success: true, resetToken: resetToken });
     } catch (error) {
+        console.error('Erreur forgot password:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
 
+// Vérifier le token de reset
 app.post('/api/auth/verify-reset-token', async (req, res) => {
     try {
         const { token } = req.body;
+        
         const user = await new Promise((resolve) => {
             db.get('SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > ?',
-                [token, new Date().toISOString()], (err, row) => resolve(row));
+                [token, new Date().toISOString()],
+                (err, row) => resolve(row));
         });
         
         if (!user) {
             return res.status(400).json({ success: false, error: 'Lien invalide ou expiré' });
         }
+        
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
 
+// Réinitialiser le mot de passe
 app.post('/api/auth/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        if (newPassword.length < 6) {
-            return res.status(400).json({ success: false, error: 'Mot de passe trop court' });
+        
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, error: 'Mot de passe doit contenir au moins 6 caractères' });
         }
         
         const user = await new Promise((resolve) => {
             db.get('SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > ?',
-                [token, new Date().toISOString()], (err, row) => resolve(row));
+                [token, new Date().toISOString()],
+                (err, row) => resolve(row));
         });
         
         if (!user) {
@@ -260,50 +302,82 @@ app.post('/api/auth/reset-password', async (req, res) => {
         }
         
         const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
         await new Promise((resolve, reject) => {
             db.run(`UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?`,
-                [hashedPassword, user.id], (err) => {
-                if (err) reject(err); else resolve();
-            });
+                [hashedPassword, user.id],
+                (err) => { if (err) reject(err); else resolve(); });
         });
         
-        res.json({ success: true, message: 'Mot de passe réinitialisé' });
+        res.json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
     } catch (error) {
-        res.status(500).json({ success: false });
+        console.error('Erreur reset password:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
 
+// Dashboard
 app.get('/api/wallet/dashboard', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false });
+    if (!token) {
+        return res.status(401).json({ success: false, error: 'Non autorisé' });
+    }
     
     const userId = token.split('_')[1];
+    
     db.all('SELECT * FROM assets WHERE user_id = ?', [userId], (err, assets) => {
+        if (err) {
+            return res.status(500).json({ success: false });
+        }
+        
         const totalBalance = assets.reduce((sum, a) => sum + (a.usd_value || 0), 0);
+        
+        const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+        
         res.json({
             success: true,
             dashboard: {
                 totalBalance: totalBalance,
-                assets: assets.map(a => ({ ...a, icon: a.symbol === 'BTC' ? '₿' : a.symbol === 'ETH' ? 'Ξ' : a.symbol === 'BNB' ? '🔶' : a.symbol === 'SOL' ? '◎' : '💵' })),
+                assets: assets.map(a => ({
+                    ...a,
+                    icon: icons[a.symbol] || '💰'
+                })),
                 transactions: []
             }
         });
     });
 });
 
+// Envoi de transaction (simulé)
 app.post('/api/wallet/send', (req, res) => {
-    res.json({ success: true, message: 'Transaction simulée' });
+    const { to, amount, symbol } = req.body;
+    res.json({
+        success: true,
+        message: `Transaction de ${amount} ${symbol} vers ${to} simulée`,
+        txHash: `0x${crypto.randomBytes(16).toString('hex')}`
+    });
 });
 
+// Routes frontend
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'dashboard.html'));
 });
 
 app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'admin.html'));
 });
 
+app.get('/coin-detail.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'coin-detail.html'));
+});
+
+// Démarrer le serveur
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 BetWallet API sur http://0.0.0.0:${PORT}`);
-    console.log(`🔐 Admin: admin@betwallet.com / Admin123!`);
+    console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
+    console.log(`📁 Page admin: https://supportblockchain.finance/admin.html`);
+    console.log(`🔐 Identifiants admin: admin@betwallet.com / Admin123!\n`);
 });
