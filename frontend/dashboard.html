@@ -56,7 +56,6 @@
         }
         .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; }
         
-        /* Onglet Crypto */
         .tab-nav {
             display: flex;
             padding: 10px 20px;
@@ -180,7 +179,6 @@
         <button class="action-btn" onclick="quickAction('receive')"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
     </div>
 
-    <!-- Onglet Crypto -->
     <div class="tab-nav">
         <div class="tab-item active" data-tab="crypto">Crypto</div>
     </div>
@@ -189,7 +187,6 @@
         <div style="text-align:center; padding:40px;">Chargement des cryptos...</div>
     </div>
 
-    <!-- Bottom Navigation -->
     <div class="bottom-nav">
         <button class="nav-item active" data-nav="home"><i class="fas fa-home"></i><span>Accueil</span></button>
         <button class="nav-item" data-nav="deposit"><i class="fas fa-arrow-down"></i><span>Dépôt</span></button>
@@ -249,7 +246,6 @@
         let userAssets = [];
         let marketPrices = {};
 
-        // TOUTES LES CRYPTOS
         const allCryptos = [
             { symbol: 'BTC', name: 'Bitcoin', icon: '₿', network: 'Bitcoin' },
             { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', network: 'Ethereum' },
@@ -269,6 +265,12 @@
             try {
                 const ids = 'bitcoin,ethereum,binancecoin,solana,tether,ripple,cardano,dogecoin,polygon,polkadot,avalanche-2,chainlink';
                 const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+                
+                if (!response.ok) {
+                    console.warn(`API CoinGecko: ${response.status}`);
+                    return marketPrices;
+                }
+                
                 const data = await response.json();
                 marketPrices = {
                     BTC: { usd: data.bitcoin?.usd || 57000, change24h: data.bitcoin?.usd_24h_change || 0 },
@@ -352,7 +354,6 @@
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-        // Modals
         function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
         function openReceiveModal() { 
             document.getElementById('receiveModal').style.display = 'flex';
@@ -407,8 +408,12 @@
             });
         });
 
+        // Chargement initial
         loadDashboard();
-        setInterval(() => { loadDashboard(); }, 30000);
+        
+        // INTERVALLE AUGMENTÉ À 60 SECONDES (60000 ms) au lieu de 30 secondes
+        // Cela évite les limites de l'API CoinGecko (429 Too Many Requests)
+        setInterval(() => { loadDashboard(); }, 60000);
     </script>
 </body>
 </html>
