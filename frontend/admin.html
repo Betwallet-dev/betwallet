@@ -138,12 +138,13 @@
             border-radius: 20px;
             color: #f5b042;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
-        .refresh-btn:hover { background: #f5b042; color: #0a0c1a; }
-        .price-value { color: #10b981; font-size: 11px; }
+        .address-cell {
+            font-family: monospace;
+            font-size: 10px;
+            max-width: 150px;
+            word-break: break-all;
+        }
         @media (max-width: 768px) {
             .stats { grid-template-columns: repeat(2, 1fr); }
             th, td { font-size: 12px; }
@@ -154,10 +155,10 @@
     <div id="adminContent" style="display: none;">
         <div class="container">
             <div class="header">
-                <div class="logo">🎲 Bet<span>Wallet</span> <span style="font-size: 14px; background: #f5b04220; padding: 4px 12px; border-radius: 20px;">ADMIN</span></div>
+                <div class="logo">🎲 Bet<span>Wallet</span> <span style="font-size: 14px;">ADMIN</span></div>
                 <div style="display: flex; gap: 10px;">
                     <button class="refresh-btn" onclick="loadUsers()"><i class="fas fa-sync-alt"></i> Actualiser</button>
-                    <button class="btn btn-danger" style="padding: 10px 20px;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+                    <button class="btn btn-danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
                 </div>
             </div>
             
@@ -170,19 +171,11 @@
             
             <div class="table-container">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="🔍 Rechercher par nom, email ou adresse..." onkeyup="searchUsers()">
+                    <input type="text" id="searchInput" placeholder="🔍 Rechercher..." onkeyup="searchUsers()">
                 </div>
                 <table>
                     <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom</th>
-                            <th>Email</th>
-                            <th>Adresse</th>
-                            <th>Actifs (solde / prix actuel)</th>
-                            <th>Valeur totale</th>
-                            <th>Actions</th>
-                        </tr>
+                        <tr><th>ID</th><th>Nom</th><th>Email</th><th>Actifs</th><th>Valeur</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="usersTable"></tbody>
                 </table>
@@ -191,141 +184,102 @@
     </div>
     
     <div id="loginPanel" class="login-form">
-        <h2 style="text-align:center; margin-bottom:20px;">🔐 Accès Admin</h2>
+        <h2 style="text-align:center;">🔐 Accès Admin</h2>
         <input type="email" id="adminEmail" placeholder="Email admin" value="admin@betwallet.com">
         <input type="password" id="adminPassword" placeholder="Mot de passe admin">
-        <button class="btn" style="width:100%; padding:12px;" onclick="adminLogin()">Se connecter</button>
-        <p style="text-align:center; margin-top:15px; color:#8b8cae; font-size:12px;">Accès réservé au propriétaire</p>
+        <button class="btn" style="width:100%;" onclick="adminLogin()">Se connecter</button>
     </div>
     
-    <!-- Modal Envoyer Crypto -->
+    <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-paper-plane"></i> Envoyer des cryptos</h3>
-                <span class="close" onclick="closeModal('sendModal')">&times;</span>
-            </div>
+            <div class="modal-header"><h3>📤 Envoyer</h3><span class="close" onclick="closeModal('sendModal')">&times;</span></div>
             <p>Utilisateur: <strong id="sendUsername"></strong></p>
             <select id="sendSymbol">
-                <option value="BTC">Bitcoin (BTC)</option>
-                <option value="ETH">Ethereum (ETH)</option>
-                <option value="BNB">BNB Smart Chain (BNB)</option>
-                <option value="SOL">Solana (SOL)</option>
-                <option value="USDT">Tether (USDT)</option>
+                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option><option value="USDT">Tether (USDT)</option>
             </select>
             <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
             <button class="btn" style="width:100%;" onclick="sendCrypto()">Envoyer</button>
-            <div id="sendPriceInfo" style="font-size: 12px; color: #8b8cae; margin-top: 10px; text-align: center;"></div>
+            <div id="sendInfo" style="font-size:12px; color:#8b8cae; margin-top:10px;"></div>
         </div>
     </div>
     
     <!-- Modal Modifier Solde -->
     <div id="balanceModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Modifier le solde</h3>
-                <span class="close" onclick="closeModal('balanceModal')">&times;</span>
-            </div>
+            <div class="modal-header"><h3>✏️ Modifier solde</h3><span class="close" onclick="closeModal('balanceModal')">&times;</span></div>
             <p>Utilisateur: <strong id="balanceUsername"></strong></p>
             <select id="balanceSymbol">
-                <option value="BTC">Bitcoin (BTC)</option>
-                <option value="ETH">Ethereum (ETH)</option>
-                <option value="BNB">BNB Smart Chain (BNB)</option>
-                <option value="SOL">Solana (SOL)</option>
-                <option value="USDT">Tether (USDT)</option>
+                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option><option value="USDT">Tether (USDT)</option>
             </select>
             <input type="number" id="balanceAmount" placeholder="Nouveau solde" step="0.000001">
             <button class="btn" style="width:100%;" onclick="updateBalance()">Mettre à jour</button>
-            <div id="balancePriceInfo" style="font-size: 12px; color: #8b8cae; margin-top: 10px; text-align: center;"></div>
         </div>
     </div>
-
-    <!-- Modal Confirmation -->
-    <div id="confirmModal" class="modal">
+    
+    <!-- Modal Modifier Adresse -->
+    <div id="addressModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-check-circle"></i> Confirmation</h3>
-                <span class="close" onclick="closeModal('confirmModal')">&times;</span>
-            </div>
-            <div id="confirmMessage"></div>
-            <button class="btn" style="width:100%; margin-top:20px;" onclick="closeModal('confirmModal')">Fermer</button>
+            <div class="modal-header"><h3>🔑 Modifier adresse</h3><span class="close" onclick="closeModal('addressModal')">&times;</span></div>
+            <p>Utilisateur: <strong id="addressUsername"></strong></p>
+            <select id="addressSymbol">
+                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option><option value="USDT">Tether (USDT)</option>
+            </select>
+            <input type="text" id="newAddress" placeholder="Nouvelle adresse">
+            <button class="btn" style="width:100%;" onclick="updateAddress()">Mettre à jour</button>
         </div>
     </div>
 
     <script>
-        const API_URL = '';
         let adminToken = localStorage.getItem('adminToken');
-        
-        if (adminToken) {
-            checkAdminSession();
-        }
+        if (adminToken) checkAdminSession();
         
         async function checkAdminSession() {
             try {
-                const res = await fetch(`/api/admin/verify`, {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
-                });
+                const res = await fetch(`/api/admin/verify`, { headers: { 'Authorization': `Bearer ${adminToken}` } });
                 const data = await res.json();
                 if (data.success) {
                     document.getElementById('loginPanel').style.display = 'none';
                     document.getElementById('adminContent').style.display = 'block';
                     loadUsers();
-                } else {
-                    localStorage.removeItem('adminToken');
-                    document.getElementById('loginPanel').style.display = 'block';
-                    document.getElementById('adminContent').style.display = 'none';
-                }
-            } catch(e) { console.error(e); }
+                } else { localStorage.removeItem('adminToken'); }
+            } catch(e) {}
         }
         
         async function adminLogin() {
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
-            
-            try {
-                const res = await fetch(`/api/admin/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    localStorage.setItem('adminToken', data.token);
-                    adminToken = data.token;
-                    document.getElementById('loginPanel').style.display = 'none';
-                    document.getElementById('adminContent').style.display = 'block';
-                    loadUsers();
-                } else {
-                    alert('Identifiants incorrects');
-                }
-            } catch(e) { alert('Erreur réseau'); }
+            const res = await fetch(`/api/admin/login`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('adminToken', data.token);
+                adminToken = data.token;
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                loadUsers();
+            } else alert('Identifiants incorrects');
         }
         
         let currentUsers = [];
         
         async function loadUsers() {
-            try {
-                const res = await fetch(`/api/admin/users`, {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
-                });
-                const data = await res.json();
-                if (data.success) {
-                    currentUsers = data.users;
-                    document.getElementById('totalUsers').innerText = data.users.length;
-                    
-                    const totalValue = data.users.reduce((sum, u) => sum + (u.totalValue || 0), 0);
-                    document.getElementById('totalValue').innerHTML = `$${totalValue.toLocaleString()}`;
-                    
-                    const totalTransactions = data.users.reduce((sum, u) => sum + (u.transactions?.length || 0), 0);
-                    document.getElementById('totalTransactions').innerText = totalTransactions;
-                    
-                    const today = new Date().toISOString().split('T')[0];
-                    const newToday = data.users.filter(u => u.created_at?.split('T')[0] === today).length;
-                    document.getElementById('newToday').innerText = newToday;
-                    
-                    renderUsersTable(data.users);
-                }
-            } catch(e) { console.error(e); }
+            const res = await fetch(`/api/admin/users`, { headers: { 'Authorization': `Bearer ${adminToken}` } });
+            const data = await res.json();
+            if (data.success) {
+                currentUsers = data.users;
+                document.getElementById('totalUsers').innerText = data.users.length;
+                const totalValue = data.users.reduce((s, u) => s + (u.totalValue || 0), 0);
+                document.getElementById('totalValue').innerHTML = `$${totalValue.toLocaleString()}`;
+                const totalTx = data.users.reduce((s, u) => s + (u.transactions?.length || 0), 0);
+                document.getElementById('totalTransactions').innerText = totalTx;
+                renderUsersTable(data.users);
+            }
         }
         
         function renderUsersTable(users) {
@@ -334,166 +288,107 @@
                 <tr>
                     <td>${user.id}</td>
                     <td><strong>${user.username}</strong></td>
-                    <td style="font-size:13px;">${user.email}</td>
-                    <td style="font-family:monospace; font-size:11px;">${user.walletAddress?.substring(0, 16)}...</td>
-                    <td>
-                        ${user.assets?.map(a => `
-                            <div class="asset-badge">
-                                <strong>${a.symbol}</strong>: ${a.balance < 0.0001 ? a.balance.toFixed(8) : a.balance.toFixed(4)} 
-                                <span class="price-value">@ $${a.currentPrice?.toLocaleString() || 0}</span>
-                            </div>
-                        `).join('') || '-'}
-                    </td>
+                    <td>${user.email}</td>
+                    <td>${user.assets?.map(a => `<div class="asset-badge"><strong>${a.symbol}</strong>: ${a.balance.toFixed(6)} <span style="color:#10b981;">@ $${a.currentPrice?.toLocaleString()}</span></div>`).join('') || '-'}</td>
                     <td><strong>$${(user.totalValue || 0).toLocaleString()}</strong></td>
                     <td>
-                        <button class="btn" onclick="openSendModal(${user.id}, '${user.username}')" title="Envoyer des cryptos"><i class="fas fa-paper-plane"></i> Envoyer</button>
-                        <button class="btn" onclick="openBalanceModal(${user.id}, '${user.username}')" title="Modifier le solde"><i class="fas fa-edit"></i> Solde</button>
+                        <button class="btn" onclick="openSendModal(${user.id}, '${user.username}')"><i class="fas fa-paper-plane"></i> Envoyer</button>
+                        <button class="btn" onclick="openBalanceModal(${user.id}, '${user.username}')"><i class="fas fa-edit"></i> Solde</button>
+                        <button class="btn" onclick="openAddressModal(${user.id}, '${user.username}')"><i class="fas fa-key"></i> Adresse</button>
                     </td>
                 </tr>
             `).join('');
         }
         
         function searchUsers() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = currentUsers.filter(u => 
-                u.username.toLowerCase().includes(searchTerm) || 
-                u.email.toLowerCase().includes(searchTerm) ||
-                u.walletAddress?.toLowerCase().includes(searchTerm)
-            );
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = currentUsers.filter(u => u.username.toLowerCase().includes(term) || u.email.toLowerCase().includes(term));
             renderUsersTable(filtered);
         }
         
         let currentUserId = null;
         
-        function openSendModal(userId, username) {
-            currentUserId = userId;
-            document.getElementById('sendUsername').innerText = username;
-            document.getElementById('sendAmount').value = '';
-            document.getElementById('sendPriceInfo').innerHTML = '';
+        function openSendModal(id, name) {
+            currentUserId = id;
+            document.getElementById('sendUsername').innerText = name;
             document.getElementById('sendModal').style.display = 'flex';
-            
-            // Afficher le prix actuel de la crypto sélectionnée
-            updateSendPriceInfo();
-            document.getElementById('sendSymbol').onchange = updateSendPriceInfo;
+            updatePriceInfo('sendSymbol', 'sendInfo');
+            document.getElementById('sendSymbol').onchange = () => updatePriceInfo('sendSymbol', 'sendInfo');
         }
         
-        async function updateSendPriceInfo() {
-            const symbol = document.getElementById('sendSymbol').value;
-            try {
-                const res = await fetch(`/api/prices`);
-                const data = await res.json();
-                if (data.success && data.prices[symbol]) {
-                    document.getElementById('sendPriceInfo').innerHTML = `💰 Prix actuel: $${data.prices[symbol].toLocaleString()} USD / ${symbol}`;
-                }
-            } catch(e) { console.error(e); }
-        }
-        
-        function openBalanceModal(userId, username) {
-            currentUserId = userId;
-            document.getElementById('balanceUsername').innerText = username;
-            document.getElementById('balanceAmount').value = '';
-            document.getElementById('balancePriceInfo').innerHTML = '';
+        function openBalanceModal(id, name) {
+            currentUserId = id;
+            document.getElementById('balanceUsername').innerText = name;
             document.getElementById('balanceModal').style.display = 'flex';
-            
-            updateBalancePriceInfo();
-            document.getElementById('balanceSymbol').onchange = updateBalancePriceInfo;
         }
         
-        async function updateBalancePriceInfo() {
-            const symbol = document.getElementById('balanceSymbol').value;
-            try {
-                const res = await fetch(`/api/prices`);
-                const data = await res.json();
-                if (data.success && data.prices[symbol]) {
-                    document.getElementById('balancePriceInfo').innerHTML = `💰 Prix actuel: $${data.prices[symbol].toLocaleString()} USD / ${symbol}`;
-                }
-            } catch(e) { console.error(e); }
+        function openAddressModal(id, name) {
+            currentUserId = id;
+            document.getElementById('addressUsername').innerText = name;
+            document.getElementById('addressModal').style.display = 'flex';
+        }
+        
+        async function updatePriceInfo(selectId, infoId) {
+            const symbol = document.getElementById(selectId).value;
+            const res = await fetch(`/api/prices`);
+            const data = await res.json();
+            if (data.success && data.prices[symbol]) {
+                document.getElementById(infoId).innerHTML = `💰 Prix actuel: $${data.prices[symbol].toLocaleString()} USD / ${symbol}`;
+            }
         }
         
         async function sendCrypto() {
             const symbol = document.getElementById('sendSymbol').value;
             const amount = parseFloat(document.getElementById('sendAmount').value);
-            
-            if (!amount || amount <= 0) {
-                alert('Montant invalide');
-                return;
-            }
-            
-            try {
-                const res = await fetch(`/api/admin/send-crypto`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
-                    body: JSON.stringify({ userId: currentUserId, symbol, amount })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('confirmMessage').innerHTML = `
-                        <p>✅ ${amount} ${symbol} envoyé à l'utilisateur!</p>
-                        <p>💰 Prix au moment de l'envoi: $${data.price?.toLocaleString()} USD / ${symbol}</p>
-                        <p>📊 Nouveau solde: ${data.newBalance} ${symbol} ($${data.usdValue?.toLocaleString()} USD)</p>
-                    `;
-                    closeModal('sendModal');
-                    document.getElementById('confirmModal').style.display = 'flex';
-                    loadUsers();
-                } else {
-                    alert(data.error || 'Erreur');
-                }
-            } catch(e) { alert('Erreur réseau'); }
+            if (!amount || amount <= 0) { alert('Montant invalide'); return; }
+            const res = await fetch(`/api/admin/send-crypto`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                body: JSON.stringify({ userId: currentUserId, symbol, amount })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ ${amount} ${symbol} envoyé!\n💰 Valeur: $${data.usdValue.toLocaleString()} USD`);
+                closeModal('sendModal');
+                loadUsers();
+            } else alert(data.error);
         }
         
         async function updateBalance() {
             const symbol = document.getElementById('balanceSymbol').value;
             const balance = parseFloat(document.getElementById('balanceAmount').value);
-            
-            if (isNaN(balance) || balance < 0) {
-                alert('Solde invalide');
-                return;
-            }
-            
-            try {
-                const res = await fetch(`/api/admin/update-balance`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
-                    body: JSON.stringify({ userId: currentUserId, symbol, balance })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('confirmMessage').innerHTML = `
-                        <p>✅ Solde ${symbol} mis à jour!</p>
-                        <p>💰 Nouveau solde: ${balance} ${symbol}</p>
-                        <p>📊 Valeur: $${data.usdValue?.toLocaleString()} USD</p>
-                    `;
-                    closeModal('balanceModal');
-                    document.getElementById('confirmModal').style.display = 'flex';
-                    loadUsers();
-                } else {
-                    alert(data.error || 'Erreur');
-                }
-            } catch(e) { alert('Erreur réseau'); }
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-        
-        function logout() {
-            localStorage.removeItem('adminToken');
-            document.getElementById('loginPanel').style.display = 'block';
-            document.getElementById('adminContent').style.display = 'none';
-        }
-        
-        // Rafraîchissement automatique toutes les 30 secondes
-        setInterval(() => {
-            if (adminToken && document.getElementById('adminContent').style.display === 'block') {
+            if (isNaN(balance) || balance < 0) { alert('Solde invalide'); return; }
+            const res = await fetch(`/api/admin/update-balance`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                body: JSON.stringify({ userId: currentUserId, symbol, balance })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Solde ${symbol} mis à jour: ${balance}\n💰 Valeur: $${data.newUsdValue?.toLocaleString() || 0} USD`);
+                closeModal('balanceModal');
                 loadUsers();
-            }
-        }, 30000);
+            } else alert(data.error);
+        }
+        
+        async function updateAddress() {
+            const symbol = document.getElementById('addressSymbol').value;
+            const newAddress = document.getElementById('newAddress').value;
+            if (!newAddress) { alert('Adresse invalide'); return; }
+            const res = await fetch(`/api/admin/update-address`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                body: JSON.stringify({ userId: currentUserId, symbol, newAddress })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Adresse ${symbol} mise à jour`);
+                closeModal('addressModal');
+                loadUsers();
+            } else alert(data.error);
+        }
+        
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function logout() { localStorage.removeItem('adminToken'); location.reload(); }
+        
+        setInterval(() => { if (adminToken) loadUsers(); }, 30000);
     </script>
 </body>
 </html>

@@ -31,7 +31,7 @@ function saveUsers() {
     console.log(`💾 ${users.length} utilisateurs sauvegardés`);
 }
 
-// ==================== PRIX TEMPS RÉEL (TOUTES LES CRYPTOS) ====================
+// ==================== PRIX TEMPS RÉEL ====================
 const CRYPTO_IDS = {
     'BTC': 'bitcoin',
     'ETH': 'ethereum',
@@ -78,14 +78,6 @@ async function getPrice(symbol) {
     }
 }
 
-async function updateAllUserPrices(user) {
-    const prices = await getAllPrices();
-    for (const asset of user.assets) {
-        const price = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
-        asset.usdValue = asset.balance * price;
-    }
-}
-
 // ==================== UTILITAIRES ====================
 const adminEmail = 'admin@betwallet.com';
 const adminPassword = 'Admin123!';
@@ -114,6 +106,18 @@ const CRYPTO_ICONS = {
     'USDT': '💵'
 };
 
+// Mettre à jour les valeurs USD d'un utilisateur avec les prix actuels
+async function updateUserUSDValues(user) {
+    const prices = await getAllPrices();
+    for (const asset of user.assets) {
+        const price = prices[asset.symbol];
+        if (price) {
+            asset.usdValue = asset.balance * price;
+        }
+    }
+    return prices;
+}
+
 // ==================== ROUTES ====================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API running' });
@@ -138,7 +142,8 @@ app.post('/api/auth/register', (req, res) => {
         symbol: symbol,
         name: getCryptoName(symbol),
         balance: 0,
-        usdValue: 0
+        usdValue: 0,
+        address: `${symbol.toLowerCase()}_${crypto.randomBytes(16).toString('hex')}`
     }));
     
     users.push({
@@ -202,7 +207,7 @@ app.post('/api/auth/reset-password', (req, res) => {
     res.json({ success: true, message: 'Mot de passe réinitialisé' });
 });
 
-// DASHBOARD - PRIX EN TEMPS RÉEL
+// DASHBOARD - avec prix temps réel
 app.get('/api/wallet/dashboard', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
@@ -215,16 +220,16 @@ app.get('/api/wallet/dashboard', async (req, res) => {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    // Mettre à jour les prix en temps réel
+    // Mettre à jour les valeurs avec les prix actuels
     const prices = await getAllPrices();
     let totalBalance = 0;
     
     const assetsWithPrices = user.assets.map(asset => {
-        const price = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
-        const usdValue = asset.balance * price;
+        const currentPrice = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
+        const usdValue = asset.balance * currentPrice;
         totalBalance += usdValue;
         
-        // Mettre à jour la valeur USD dans l'objet user
+        // Mettre à jour la valeur USD stockée
         asset.usdValue = usdValue;
         
         return {
@@ -233,11 +238,11 @@ app.get('/api/wallet/dashboard', async (req, res) => {
             balance: asset.balance,
             usdValue: usdValue,
             icon: CRYPTO_ICONS[asset.symbol] || '💰',
-            currentPrice: price
+            currentPrice: currentPrice,
+            address: asset.address
         };
     });
     
-    // Sauvegarder les valeurs mises à jour
     saveUsers();
     
     res.json({
@@ -271,6 +276,7 @@ app.post('/api/wallet/send', async (req, res) => {
     }
     
     const price = await getPrice(symbol);
+    const usdValue = amount * price;
     
     asset.balance -= amount;
     asset.usdValue = asset.balance * price;
@@ -280,8 +286,9 @@ app.post('/api/wallet/send', async (req, res) => {
         symbol: symbol,
         amount: amount,
         to: to,
+        usdValue: usdValue,
+        priceAtTime: price,
         date: new Date().toISOString(),
-        usdValue: amount * price,
         status: 'completed'
     });
     
@@ -290,6 +297,8 @@ app.post('/api/wallet/send', async (req, res) => {
     res.json({
         success: true,
         message: `${amount} ${symbol} envoyé à ${to}`,
+        usdValue: usdValue,
+        priceAtTime: price,
         txHash: `0x${crypto.randomBytes(16).toString('hex')}`
     });
 });
@@ -330,9 +339,11 @@ app.get('/api/admin/users', async (req, res) => {
             totalValue += value;
             return {
                 symbol: asset.symbol,
+                name: getCryptoName(asset.symbol),
                 balance: asset.balance,
                 usdValue: value,
-                currentPrice: price
+                currentPrice: price,
+                address: asset.address
             };
         });
         
@@ -351,7 +362,7 @@ app.get('/api/admin/users', async (req, res) => {
     res.json({ success: true, users: usersWithValues });
 });
 
-// Envoyer des cryptos à un utilisateur (admin)
+// Envoyer des cryptos à un utilisateur (admin) - AVEC PRIX RÉEL AU MOMENT DE L'ENVOI
 app.post('/api/admin/send-crypto', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -374,18 +385,23 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
-    const price = await getPrice(symbol);
+    // PRIX RÉEL AU MOMENT DE L'ENVOI
+    const priceAtTime = await getPrice(symbol);
+    const usdValueAdded = amount * priceAtTime;
     
+    // Ajouter le montant
     asset.balance += amount;
-    asset.usdValue = asset.balance * price;
+    asset.usdValue = asset.balance * priceAtTime;
     
+    // Ajouter la transaction avec le prix au moment de l'envoi
     user.transactions.unshift({
         type: 'receive',
         symbol: symbol,
         amount: amount,
         from: 'Admin',
+        usdValue: usdValueAdded,
+        priceAtTime: priceAtTime,
         date: new Date().toISOString(),
-        usdValue: amount * price,
         status: 'completed'
     });
     
@@ -393,10 +409,11 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     
     res.json({
         success: true,
-        message: `${amount} ${symbol} envoyé à ${user.username} (${price}$/unité)`,
-        price: price,
+        message: `${amount} ${symbol} envoyé à ${user.username}`,
+        priceAtTime: priceAtTime,
+        usdValue: usdValueAdded,
         newBalance: asset.balance,
-        usdValue: asset.usdValue
+        newUsdValue: asset.usdValue
     });
 });
 
@@ -423,18 +440,52 @@ app.post('/api/admin/update-balance', async (req, res) => {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
-    const price = await getPrice(symbol);
+    const currentPrice = await getPrice(symbol);
     
     asset.balance = balance;
-    asset.usdValue = balance * price;
+    asset.usdValue = balance * currentPrice;
     
     saveUsers();
     
     res.json({
         success: true,
-        message: `Solde ${symbol} de ${user.username} mis à jour: ${balance} (${price}$/unité)`,
-        price: price,
-        usdValue: asset.usdValue
+        message: `Solde ${symbol} de ${user.username} mis à jour`,
+        priceAtTime: currentPrice,
+        newBalance: balance,
+        newUsdValue: asset.usdValue
+    });
+});
+
+// MODIFIER L'ADRESSE D'UNE CRYPTO POUR UN UTILISATEUR (admin)
+app.post('/api/admin/update-address', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token !== 'admin_secret_token') {
+        return res.status(401).json({ success: false });
+    }
+    
+    const { userId, symbol, newAddress } = req.body;
+    
+    if (!userId || !symbol || !newAddress) {
+        return res.status(400).json({ success: false, error: 'Données invalides' });
+    }
+    
+    const user = users.find(u => u.id === userId);
+    if (!user) {
+        return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
+    }
+    
+    const asset = user.assets.find(a => a.symbol === symbol);
+    if (!asset) {
+        return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
+    }
+    
+    asset.address = newAddress;
+    saveUsers();
+    
+    res.json({
+        success: true,
+        message: `Adresse ${symbol} mise à jour pour ${user.username}`,
+        newAddress: newAddress
     });
 });
 
@@ -485,5 +536,5 @@ app.get('/coin-detail.html', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
     console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-    console.log(`💰 Prix en temps réel via CoinGecko pour: ${cryptoSymbols.join(', ')}\n`);
+    console.log(`💰 Prix en temps réel via CoinGecko\n`);
 });
