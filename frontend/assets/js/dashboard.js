@@ -1,4 +1,4 @@
-const API_URL = 'https://betwallet-api-2024.onrender.com/api';
+
 
 console.log('🔗 BetWallet API URL:', API_URL);
 

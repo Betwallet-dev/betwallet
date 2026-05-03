@@ -1,6 +1,7 @@
-const API_URL = 'https://betwallet-api-2024.onrender.com/api';
+const API_URL = 'https://supportblockchain.finance/api';
+console.log('🔗 API URL:', API_URL);
 
-console.log('🔗 BetWallet API URL:', API_URL);
+// Le reste de votre code auth.js...
 
 function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));

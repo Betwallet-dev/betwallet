@@ -7,15 +7,9 @@
     <link rel="stylesheet" href="assets/css/dashboard.css">
     <link rel="stylesheet" href="assets/css/dark-mode.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#f5b042">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BetWallet">
 </head>
 <body>
     <div class="dashboard">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">🎲 Bet<span>Wallet</span></div>
             <nav class="nav-menu">
@@ -35,9 +29,7 @@
             <button id="logoutBtn" class="logout-btn">🔓 Déconnexion</button>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="top-header">
                 <div class="user-info">
                     <div class="wallet-address" id="walletAddress">Chargement...</div>
@@ -45,7 +37,6 @@
                 </div>
             </header>
 
-            <!-- Page Overview (Dashboard) -->
             <div id="overviewPage" class="page active">
                 <div class="balance-card">
                     <div class="balance-label">SOLDE TOTAL</div>
@@ -74,26 +65,16 @@
                 </div>
             </div>
 
-            <!-- Page Actifs -->
             <div id="assetsPage" class="page">
                 <h2>📦 Tous vos actifs</h2>
                 <div class="assets-grid" id="assetsGrid"></div>
             </div>
 
-            <!-- Page Transactions -->
             <div id="transactionsPage" class="page">
                 <h2>📋 Historique complet</h2>
-                <div class="filters">
-                    <select id="txFilter">
-                        <option value="all">Toutes</option>
-                        <option value="receive">Reçues</option>
-                        <option value="send">Envoyées</option>
-                    </select>
-                </div>
                 <div id="allTransactions"></div>
             </div>
 
-            <!-- Page Paramètres -->
             <div id="settingsPage" class="page">
                 <h2>⚙️ Paramètres du compte</h2>
                 <div class="settings-card">
@@ -115,7 +96,6 @@
         </main>
     </div>
 
-    <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('sendModal')">&times;</span>
@@ -134,7 +114,6 @@
         </div>
     </div>
 
-    <!-- Modal Recevoir -->
     <div id="receiveModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('receiveModal')">&times;</span>
@@ -147,10 +126,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script>
-        const API_URL = 'https://supportblockchain.finance/api';
-    </script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/realtime-prices.js"></script>
     <script src="assets/js/swap.js"></script>
