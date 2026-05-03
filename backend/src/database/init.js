@@ -47,6 +47,17 @@ db.exec(`
         FOREIGN KEY (wallet_id) REFERENCES wallets(id)
     );
 `);
+// Table wallets améliorée (comme Trust Wallet)
+db.run(`CREATE TABLE IF NOT EXISTS wallets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE NOT NULL,
+    seed_phrase TEXT NOT NULL,  -- Stocké chiffré en production !
+    eth_address TEXT UNIQUE NOT NULL,
+    btc_address TEXT UNIQUE NOT NULL,
+    sol_address TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`);
 
 console.log('✅ Base de données initialisée avec succès !');
 

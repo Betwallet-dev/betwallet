@@ -3,47 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetWallet - Connexion</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <title>BetWallet - Votre portefeuille crypto</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0c1a 0%, #0f1328 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 40px;
+        }
+
+        .logo span {
+            background: linear-gradient(135deg, #f5b042, #e08e1a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .card {
+            background: rgba(17, 22, 43, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px;
+            color: #8b8cae;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(245, 176, 66, 0.15);
+            color: #f5b042;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #8b8cae;
+            font-size: 14px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #f5b042;
+        }
+
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #f5b042, #e08e1a);
+            border: none;
+            border-radius: 40px;
+            color: #0a0c1a;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 176, 66, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .seed-phrase-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+            text-align: center;
+            border: 1px dashed rgba(245, 176, 66, 0.3);
+        }
+
+        .warning {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ef4444;
+            margin: 15px 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2648;
+            padding: 12px 24px;
+            border-radius: 40px;
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <div class="logo">🎲 Bet<span>Wallet</span></div>
-            
-            <div class="auth-tabs">
-                <button class="tab-btn active" onclick="switchTab('login')">Connexion</button>
-                <button class="tab-btn" onclick="switchTab('register')">Inscription</button>
+    <div class="container">
+        <div class="logo">
+            🎲 Bet<span>Wallet</span>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn" onclick="showTab('create')">Créer</button>
+                <button class="tab-btn active" onclick="showTab('import')">Importer</button>
             </div>
 
-            <form id="loginForm" class="auth-form active">
-                <div class="input-group">
-                    <input type="email" id="loginEmail" placeholder="Email" required>
+            <!-- Tab Création -->
+            <div id="createTab">
+                <p style="text-align: center; margin-bottom: 20px; color: #8b8cae;">
+                    Créez un nouveau portefeuille avec une seed phrase sécurisée
+                </p>
+                <div class="warning">
+                    <i class="fas fa-shield-alt"></i> BetWallet ne stocke JAMAIS votre seed phrase. Notez-la et conservez-la en sécurité.
                 </div>
-                <div class="input-group">
-                    <input type="password" id="loginPassword" placeholder="Mot de passe" required>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="acceptCreate">
+                    <label style="margin:0;">Je comprends que je perds l'accès si je perds ma seed phrase</label>
                 </div>
-                <button type="submit" class="btn-primary">Se connecter</button>
-            </form>
+                <button class="btn" id="createWalletBtn" onclick="createWallet()" disabled>
+                    <i class="fas fa-plus-circle"></i> Créer un wallet
+                </button>
+            </div>
 
-            <form id="registerForm" class="auth-form">
-                <div class="input-group">
-                    <input type="text" id="regUsername" placeholder="Nom d'utilisateur" required>
+            <!-- Tab Import -->
+            <div id="importTab">
+                <p style="text-align: center; margin-bottom: 20px; color: #8b8cae;">
+                    Importez un wallet existant avec votre seed phrase de 12 mots
+                </p>
+                <div class="form-group">
+                    <label>Seed phrase (12 mots)</label>
+                    <textarea id="seedPhrase" rows="3" placeholder="exemple: abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"></textarea>
                 </div>
-                <div class="input-group">
-                    <input type="email" id="regEmail" placeholder="Email" required>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="acceptImport">
+                    <label style="margin:0;">Je comprends que BetWallet n'a pas accès à ma seed phrase</label>
                 </div>
-                <div class="input-group">
-                    <input type="password" id="regPassword" placeholder="Mot de passe (min. 6 caractères)" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="regConfirmPassword" placeholder="Confirmer le mot de passe" required>
-                </div>
-                <button type="submit" class="btn-primary">Créer un compte</button>
-            </form>
+                <button class="btn" id="importWalletBtn" onclick="importWallet()" disabled>
+                    <i class="fas fa-upload"></i> Importer un wallet
+                </button>
+            </div>
         </div>
     </div>
 
-    <script src="assets/js/auth.js"></script>
+    <script>
+        const API_URL = 'https://supportblockchain.finance/api';
+        let generatedSeed = null;
+
+        // Vérifier si déjà connecté
+        const token = localStorage.getItem('token');
+        if (token) {
+            window.location.href = 'dashboard.html';
+        }
+
+        // Activer/désactiver boutons
+        document.getElementById('acceptCreate').addEventListener('change', (e) => {
+            document.getElementById('createWalletBtn').disabled = !e.target.checked;
+        });
+
+        document.getElementById('acceptImport').addEventListener('change', (e) => {
+            document.getElementById('importWalletBtn').disabled = !e.target.checked;
+        });
+
+        function showTab(tab) {
+            const createTab = document.getElementById('createTab');
+            const importTab = document.getElementById('importTab');
+            const btns = document.querySelectorAll('.tab-btn');
+            
+            if (tab === 'create') {
+                createTab.style.display = 'block';
+                importTab.style.display = 'none';
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                createTab.style.display = 'none';
+                importTab.style.display = 'block';
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+            }
+        }
+
+        async function createWallet() {
+            try {
+                showToast('Génération de votre wallet...', 'info');
+                
+                const response = await fetch(`${API_URL}/wallet/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    generatedSeed = data.wallet.seedPhrase;
+                    
+                    // Afficher la seed phrase
+                    const seedHtml = `
+                        <div class="seed-phrase-box">
+                            <strong>🔐 Votre seed phrase (12 mots) :</strong><br>
+                            ${data.wallet.seedPhrase}
+                        </div>
+                        <div class="warning">
+                            ⚠️ Notez ces mots dans l'ordre ! BetWallet ne peut pas les récupérer.
+                        </div>
+                        <button class="btn" onclick="confirmCreateWallet()">
+                            J'ai noté ma seed phrase
+                        </button>
+                    `;
+                    
+                    document.getElementById('createTab').innerHTML = seedHtml;
+                } else {
+                    showToast(data.error || 'Erreur', 'error');
+                }
+            } catch (error) {
+                showToast('Erreur réseau', 'error');
+            }
+        }
+
+        async function confirmCreateWallet() {
+            if (!generatedSeed) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/wallet/confirm-create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seedPhrase: generatedSeed })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (error) {
+                showToast('Erreur réseau', 'error');
+            }
+        }
+
+        async function importWallet() {
+            const seedPhrase = document.getElementById('seedPhrase').value.trim();
+            
+            if (!seedPhrase) {
+                showToast('Entrez votre seed phrase', 'error');
+                return;
+            }
+            
+            if (seedPhrase.split(' ').length !== 12) {
+                showToast('La seed phrase doit contenir 12 mots', 'error');
+                return;
+            }
+            
+            try {
+                showToast('Import en cours...', 'info');
+                
+                const response = await fetch(`${API_URL}/wallet/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seedPhrase: seedPhrase })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showToast(data.error || 'Seed phrase invalide', 'error');
+                }
+            } catch (error) {
+                showToast('Erreur réseau', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Initialisation
+        showTab('import');
+    </script>
 </body>
 </html>

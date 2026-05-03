@@ -120,6 +120,15 @@ class WalletController {
                 error: 'Erreur lors de l\'envoi' 
             });
         }
+        const { sendTransactionEmail } = require('../services/email.service');
+
+// Dans sendTransaction, après la transaction
+await sendTransactionEmail(user.email, {
+    type: 'send',
+    amount: amount,
+    symbol: symbol,
+    txHash: txHash
+});
     }
 }
 

@@ -2,14 +2,11 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>BetWallet - Tableau de bord</title>
-    
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetWallet - Portefeuille</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
         * {
             margin: 0;
@@ -20,51 +17,28 @@
         body {
             font-family: 'Inter', sans-serif;
             background: #0a0c1a;
-            color: #ffffff;
-            overflow-x: hidden;
+            color: white;
         }
 
-        /* ========== ANIMATIONS ========== */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .animate-fade {
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        /* ========== DASHBOARD LAYOUT ========== */
-        .dashboard {
+        /* Header */
+        .header {
             display: flex;
-            min-height: 100vh;
-        }
-
-        /* ========== SIDEBAR ========== */
-        .sidebar {
-            width: 280px;
-            background: rgba(17, 22, 43, 0.95);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 30px 20px;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            transition: all 0.3s;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 30px;
         }
 
         .logo {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         .logo span {
@@ -74,249 +48,56 @@
             color: transparent;
         }
 
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 12px;
-            color: #8b8cae;
-            text-decoration: none;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .nav-item i {
-            width: 22px;
-            font-size: 18px;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            background: linear-gradient(135deg, rgba(245, 176, 66, 0.15), rgba(245, 176, 66, 0.05));
-            color: #f5b042;
-        }
-
-        /* ========== MAIN CONTENT ========== */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 30px 40px;
-        }
-
-        /* ========== HEADER ========== */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .page-title h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .page-title p {
-            color: #8b8cae;
-            font-size: 14px;
-            margin-top: 5px;
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .wallet-badge {
-            background: rgba(245, 176, 66, 0.15);
+        .wallet-address {
+            background: rgba(245, 176, 66, 0.1);
             padding: 8px 16px;
             border-radius: 40px;
-            font-size: 12px;
             font-family: monospace;
-            color: #f5b042;
+            font-size: 12px;
+            cursor: pointer;
         }
 
-        .avatar {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #f5b042, #e08e1a);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        /* ========== STATS CARDS ========== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+        /* Balance Card */
+        .balance-card {
+            background: linear-gradient(135deg, #11162b, #0a0e1c);
+            border-radius: 28px;
+            padding: 30px;
             margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
-        .stat-card {
-            background: rgba(17, 22, 43, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(245, 176, 66, 0.3);
-        }
-
-        .stat-label {
+        .balance-label {
             color: #8b8cae;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 14px;
             margin-bottom: 10px;
         }
 
-        .stat-value {
-            font-size: 32px;
+        .balance-amount {
+            font-size: 48px;
             font-weight: 700;
+            color: #f5b042;
         }
 
-        .stat-change {
-            font-size: 12px;
-            margin-top: 10px;
-        }
-
-        .change-positive { color: #10b981; }
-        .change-negative { color: #ef4444; }
-
-        /* ========== CHART SECTION ========== */
-        .chart-section {
-            background: rgba(17, 22, 43, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .timeframe-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .time-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 6px 14px;
-            border-radius: 20px;
+        .balance-usd {
             color: #8b8cae;
-            cursor: pointer;
-            transition: all 0.3s;
+            margin-top: 5px;
         }
 
-        .time-btn.active, .time-btn:hover {
-            background: #f5b042;
-            border-color: #f5b042;
-            color: #0a0c1a;
-        }
-
-        canvas { max-height: 300px; width: 100%; }
-
-        /* ========== ASSETS TABLE ========== */
-        .assets-section {
-            background: rgba(17, 22, 43, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        .assets-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .assets-table th {
-            text-align: left;
-            padding: 15px 10px;
-            color: #8b8cae;
-            font-weight: 500;
-            font-size: 13px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .assets-table td {
-            padding: 15px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .asset-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .asset-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .asset-name {
-            font-weight: 600;
-        }
-
-        .asset-symbol {
-            font-size: 12px;
-            color: #8b8cae;
-        }
-
-        .price-up {
-            color: #10b981;
-        }
-
-        .price-down {
-            color: #ef4444;
-        }
-
-        /* ========== ACTIONS BUTTONS ========== */
+        /* Action Buttons */
         .action-buttons {
             display: flex;
-            gap: 12px;
+            gap: 15px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         .btn {
             padding: 12px 24px;
             border-radius: 40px;
             font-weight: 600;
+            border: none;
             cursor: pointer;
             transition: all 0.3s;
-            border: none;
             font-size: 14px;
         }
 
@@ -325,51 +106,88 @@
             color: #0a0c1a;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(245, 176, 66, 0.3);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .btn-secondary {
+            background: rgba(255,255,255,0.08);
             color: white;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .btn-outline:hover {
-            border-color: #f5b042;
-            color: #f5b042;
+        .btn-secondary:hover, .btn-primary:hover {
+            transform: translateY(-2px);
         }
 
-        /* ========== LOADER ========== */
-        .loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0c1a;
+        /* Assets Grid */
+        .assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .asset-card {
+            background: rgba(17, 22, 43, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+        }
+
+        .asset-card:hover {
+            border-color: rgba(245, 176, 66, 0.3);
+        }
+
+        .asset-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .asset-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s;
+            font-size: 24px;
         }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(245, 176, 66, 0.3);
-            border-top-color: #f5b042;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .asset-info h4 {
+            font-size: 16px;
+            margin-bottom: 4px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .asset-info p {
+            font-size: 12px;
+            color: #8b8cae;
         }
 
-        /* ========== MODALS ========== */
+        .asset-balance {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .asset-price {
+            font-size: 14px;
+            color: #8b8cae;
+        }
+
+        .price-up { color: #10b981; }
+        .price-down { color: #ef4444; }
+
+        /* Chart */
+        .chart-section {
+            background: rgba(17, 22, 43, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Seed phrase modal */
         .modal {
             display: none;
             position: fixed;
@@ -377,9 +195,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            z-index: 10000;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
             align-items: center;
             justify-content: center;
         }
@@ -388,420 +205,290 @@
             background: #11162b;
             border-radius: 24px;
             padding: 30px;
+            max-width: 500px;
             width: 90%;
-            max-width: 450px;
-            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        .seed-box {
+            background: #0a0c1a;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: monospace;
+            margin: 20px 0;
+            word-break: break-all;
         }
 
-        .close-modal {
+        .close {
+            float: right;
             font-size: 28px;
             cursor: pointer;
-            color: #8b8cae;
         }
 
-        /* ========== RESPONSIVE ========== */
-        @media (max-width: 1200px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
+        /* Responsive */
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); position: fixed; z-index: 1000; }
-            .main-content { margin-left: 0; padding: 20px; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .assets-table { display: block; overflow-x: auto; }
-        }
-
-        /* ========== NOTIFICATIONS ========== */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #1f2648;
-            padding: 12px 24px;
-            border-radius: 12px;
-            color: white;
-            z-index: 11000;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            .assets-grid { grid-template-columns: 1fr; }
+            .balance-amount { font-size: 32px; }
         }
     </style>
 </head>
 <body>
-
-<div class="loader" id="loader">
-    <div class="spinner"></div>
-</div>
-
-<div class="dashboard">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="logo">
-            <i class="fas fa-dice-d6"></i>
-            <span>Bet<span>Wallet</span></span>
-        </div>
-        <nav>
-            <a href="#" class="nav-item active" data-page="overview">
-                <i class="fas fa-chart-pie"></i> Aperçu
-            </a>
-            <a href="#" class="nav-item" data-page="assets">
-                <i class="fas fa-coins"></i> Portefeuille
-            </a>
-            <a href="#" class="nav-item" data-page="transactions">
-                <i class="fas fa-history"></i> Transactions
-            </a>
-            <a href="#" class="nav-item" data-page="swap">
-                <i class="fas fa-exchange-alt"></i> Échanger
-            </a>
-            <a href="#" class="nav-item" data-page="settings">
-                <i class="fas fa-cog"></i> Paramètres
-            </a>
-        </nav>
-        <button id="logoutBtn" style="margin-top: 40px; width: 100%;" class="btn btn-outline">
-            <i class="fas fa-sign-out-alt"></i> Déconnexion
-        </button>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
+    <div class="container">
         <div class="header">
-            <div class="page-title">
-                <h1 id="pageTitle">Aperçu</h1>
-                <p id="pageSubtitle">Bienvenue <span id="username">...</span></p>
-            </div>
-            <div class="user-menu">
-                <div class="wallet-badge" id="walletAddress">...</div>
-                <div class="avatar" id="userAvatar">👤</div>
-            </div>
+            <div class="logo">🎲 Bet<span>Wallet</span></div>
+            <div class="wallet-address" id="walletAddress" onclick="copyAddress()">Chargement...</div>
         </div>
 
-        <!-- Page Overview -->
-        <div id="overviewPage" class="page active">
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">SOLDE TOTAL</div>
-                    <div class="stat-value" id="totalBalance">$0</div>
-                    <div class="stat-change" id="totalChange">--</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">PORTEFEUILLE</div>
-                    <div class="stat-value" id="betBalance">0 BET</div>
-                    <div class="stat-change">≈ $<span id="betUsd">0</span></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">ACTIFS TOTAUX</div>
-                    <div class="stat-value" id="assetCount">0</div>
-                    <div class="stat-change">Cryptos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">DERNIÈRE ACTIVITÉ</div>
-                    <div class="stat-value" id="lastActivity">-</div>
-                    <div class="stat-change">Transactions</div>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
+        <div class="balance-card">
+            <div class="balance-label">SOLDE TOTAL</div>
+            <div class="balance-amount" id="totalBalance">$0</div>
+            <div class="balance-usd" id="portfolioValue">≈ 0 BTC</div>
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="openSendModal()">
                     <i class="fas fa-arrow-up"></i> Envoyer
                 </button>
-                <button class="btn btn-outline" onclick="openReceiveModal()">
+                <button class="btn btn-secondary" onclick="openReceiveModal()">
                     <i class="fas fa-arrow-down"></i> Recevoir
                 </button>
-                <button class="btn btn-outline" onclick="refreshDashboard()">
-                    <i class="fas fa-sync-alt"></i> Actualiser
+                <button class="btn btn-secondary" onclick="showSeedPhrase()">
+                    <i class="fas fa-key"></i> Seed phrase
+                </button>
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
-
-            <!-- Chart -->
-            <div class="chart-section" style="margin-top: 30px;">
-                <div class="chart-header">
-                    <h3>Évolution du portefeuille</h3>
-                    <div class="timeframe-buttons">
-                        <button class="time-btn" data-days="7">1S</button>
-                        <button class="time-btn active" data-days="30">1M</button>
-                        <button class="time-btn" data-days="90">3M</button>
-                        <button class="time-btn" data-days="365">1A</button>
-                    </div>
-                </div>
-                <canvas id="portfolioChart" height="250"></canvas>
-            </div>
-
-            <!-- Assets Section -->
-            <div class="assets-section">
-                <div class="section-title">
-                    <i class="fas fa-coins"></i> Vos actifs
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="assets-table" id="assetsTable">
-                        <thead>
-                            <tr>
-                                <th>Actif</th>
-                                <th>Quantité</th>
-                                <th>Prix</th>
-                                <th>Valeur</th>
-                                <th>24h</th>
-                            </tr>
-                        </thead>
-                        <tbody id="assetsTableBody">
-                            <tr><td colspan="5" style="text-align: center;">Chargement...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
-        <!-- Other pages (simplifiées) -->
-        <div id="assetsPage" class="page">... Chargement ...</div>
-        <div id="transactionsPage" class="page">... Chargement ...</div>
-        <div id="swapPage" class="page">... Chargement ...</div>
-        <div id="settingsPage" class="page">... Chargement ...</div>
-    </main>
-</div>
+        <div class="chart-section">
+            <canvas id="portfolioChart" height="200"></canvas>
+        </div>
 
-<!-- Modals -->
-<div id="sendModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
+        <div class="assets-grid" id="assetsGrid">
+            <div style="text-align: center; grid-column: 1/-1;">Chargement des actifs...</div>
+        </div>
+    </div>
+
+    <!-- Modal Envoyer -->
+    <div id="sendModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sendModal')">&times;</span>
             <h3><i class="fas fa-paper-plane"></i> Envoyer</h3>
-            <span class="close-modal" onclick="closeModal('sendModal')">&times;</span>
+            <div class="form-group" style="margin: 20px 0;">
+                <select id="sendSymbol" style="width:100%; padding:12px; border-radius:10px;">
+                    <option value="ETH">Ethereum (ETH)</option>
+                    <option value="BTC">Bitcoin (BTC)</option>
+                    <option value="SOL">Solana (SOL)</option>
+                    <option value="USDT">Tether (USDT)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="text" id="sendTo" placeholder="Adresse du destinataire" style="width:100%; padding:12px; border-radius:10px;">
+            </div>
+            <div class="form-group">
+                <input type="number" id="sendAmount" placeholder="Montant" style="width:100%; padding:12px; border-radius:10px;">
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="sendTransaction()">Confirmer</button>
         </div>
-        <form id="sendForm">
-            <div class="input-group" style="margin-bottom: 15px;">
-                <label>Adresse destinataire</label>
-                <input type="text" id="sendTo" placeholder="0x..." style="width:100%; padding:12px; border-radius:10px; border:none;">
-            </div>
-            <div class="input-group" style="margin-bottom: 15px;">
-                <label>Montant (BET)</label>
-                <input type="number" id="sendAmount" step="0.01" style="width:100%; padding:12px; border-radius:10px; border:none;">
-            </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">Confirmer</button>
-        </form>
     </div>
-</div>
 
-<div id="receiveModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
+    <!-- Modal Recevoir -->
+    <div id="receiveModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('receiveModal')">&times;</span>
             <h3><i class="fas fa-qrcode"></i> Recevoir</h3>
-            <span class="close-modal" onclick="closeModal('receiveModal')">&times;</span>
-        </div>
-        <div style="text-align:center; padding:20px;">
-            <p>Votre adresse BetWallet :</p>
-            <div style="background:#0a0c1a; padding:15px; border-radius:10px; font-family:monospace; font-size:12px; word-break:break-all;" id="receiveAddress"></div>
-            <button class="btn btn-outline" style="margin-top:20px;" onclick="copyAddress()">📋 Copier</button>
+            <div class="form-group" style="margin: 20px 0;">
+                <select id="receiveSymbol" style="width:100%; padding:12px; border-radius:10px;" onchange="updateReceiveAddress()">
+                    <option value="ETH">Ethereum (ETH)</option>
+                    <option value="BTC">Bitcoin (BTC)</option>
+                    <option value="SOL">Solana (SOL)</option>
+                </select>
+            </div>
+            <div class="seed-box" id="receiveAddress">Chargement...</div>
+            <button class="btn btn-secondary" onclick="copyReceiveAddress()">Copier l'adresse</button>
         </div>
     </div>
-</div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    const API_URL = 'https://supportblockchain.finance/api';
-    let chart = null;
-    let currentPrices = {};
+    <!-- Modal Seed Phrase -->
+    <div id="seedModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('seedModal')">&times;</span>
+            <h3><i class="fas fa-shield-alt"></i> Votre seed phrase</h3>
+            <div class="warning" style="background: rgba(239,68,68,0.1); color:#ef4444; padding:12px; border-radius:8px; margin:15px 0; font-size:12px;">
+                ⚠️ Ne partagez JAMAIS cette phrase. Quiconque l'a peut contrôler vos cryptos.
+            </div>
+            <div class="seed-box" id="seedPhraseDisplay">Chargement...</div>
+            <button class="btn btn-secondary" onclick="copySeedPhrase()">Copier</button>
+        </div>
+    </div>
 
-    // ========== AUTH ==========
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = 'index.html';
+    <script>
+        const API_URL = 'https://supportblockchain.finance/api';
+        let chart = null;
+        let currentPrices = {};
 
-    // ========== LOADER ==========
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            document.getElementById('loader').style.opacity = '0';
-            setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
-        }, 500);
-    });
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'index.html';
 
-    // ========== NAVIGATION ==========
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = item.dataset.page;
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            item.classList.add('active');
-            document.getElementById(`${page}Page`).classList.add('active');
-            document.getElementById('pageTitle').innerText = item.querySelector('span').innerText;
-        });
-    });
+        // Charger les données
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_URL}/wallet/balances`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('walletAddress').innerHTML = 
+                        `<i class="fas fa-copy"></i> ${data.wallet.ethereum.substring(0, 8)}...${data.wallet.ethereum.substring(-4)}`;
+                    
+                    renderAssets(data.balances);
+                    updateTotalBalance(data.balances);
+                    initChart(data.balances);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
 
-    // ========== DASHBOARD DATA ==========
-    async function loadDashboard() {
-        try {
-            const response = await fetch(`${API_URL}/wallet/dashboard`, {
+        function renderAssets(balances) {
+            const assets = [
+                { symbol: 'ETH', name: 'Ethereum', icon: '💎', balance: balances.ethereum || 0, price: 3200 },
+                { symbol: 'BTC', name: 'Bitcoin', icon: '₿', balance: balances.bitcoin || 0, price: 57000 },
+                { symbol: 'SOL', name: 'Solana', icon: '◎', balance: balances.solana || 0, price: 140 },
+                { symbol: 'USDT', name: 'Tether', icon: '💵', balance: balances.usdt || 0, price: 1 }
+            ];
+
+            const grid = document.getElementById('assetsGrid');
+            grid.innerHTML = assets.map(asset => `
+                <div class="asset-card">
+                    <div class="asset-header">
+                        <div class="asset-icon">${asset.icon}</div>
+                        <div class="asset-info">
+                            <h4>${asset.name}</h4>
+                            <p>${asset.symbol}</p>
+                        </div>
+                    </div>
+                    <div class="asset-balance">${asset.balance.toFixed(6)} ${asset.symbol}</div>
+                    <div class="asset-price">$${(asset.balance * asset.price).toLocaleString()} USD</div>
+                    <div class="price-up" id="change-${asset.symbol}">--</div>
+                </div>
+            `).join('');
+        }
+
+        function updateTotalBalance(balances) {
+            const total = (balances.ethereum * 3200) + (balances.bitcoin * 57000) + (balances.solana * 140) + (balances.usdt || 0);
+            document.getElementById('totalBalance').innerHTML = `$${total.toLocaleString()}`;
+            document.getElementById('portfolioValue').innerHTML = `≈ ${(total / 57000).toFixed(4)} BTC`;
+        }
+
+        function initChart(balances) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            if (chart) chart.destroy();
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1j', '2j', '3j', '4j', '5j', '6j', 'Aujourd\'hui'],
+                    datasets: [{
+                        label: 'Valeur du portefeuille',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        borderColor: '#f5b042',
+                        backgroundColor: 'rgba(245, 176, 66, 0.05)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { labels: { color: '#8b8cae' } } }
+                }
+            });
+        }
+
+        async function showSeedPhrase() {
+            const response = await fetch(`${API_URL}/wallet/seed`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             if (data.success) {
-                const user = JSON.parse(localStorage.getItem('user'));
-                document.getElementById('username').innerText = user.username;
-                document.getElementById('walletAddress').innerText = user.walletAddress?.substring(0, 10) + '...';
-                document.getElementById('totalBalance').innerText = `$${data.dashboard.totalBalance.toLocaleString()}`;
-                document.getElementById('betBalance').innerText = `${data.dashboard.betBalance} BET`;
-                document.getElementById('betUsd').innerText = data.dashboard.betBalance || 0;
-                document.getElementById('assetCount').innerText = data.dashboard.assets?.length || 0;
-                
-                renderAssetsTable(data.dashboard.assets);
-                initChart(data.dashboard.chartData);
+                document.getElementById('seedPhraseDisplay').innerText = data.seedPhrase;
+                document.getElementById('seedModal').style.display = 'flex';
             }
-        } catch (error) {
-            console.error('Erreur:', error);
-            showToast('Erreur de chargement', 'error');
         }
-    }
 
-    function renderAssetsTable(assets) {
-        const tbody = document.getElementById('assetsTableBody');
-        if (!assets || assets.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun actif</td></tr>';
-            return;
+        async function updateReceiveAddress() {
+            const symbol = document.getElementById('receiveSymbol').value;
+            const response = await fetch(`${API_URL}/wallet/address/${symbol}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('receiveAddress').innerText = data.address;
+            }
         }
+
+        function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
+        function openReceiveModal() { 
+            updateReceiveAddress();
+            document.getElementById('receiveModal').style.display = 'flex'; 
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function copyAddress() { copyToClipboard('walletAddress'); }
+        function copyReceiveAddress() { copyToClipboard('receiveAddress'); }
+        function copySeedPhrase() { copyToClipboard('seedPhraseDisplay'); }
         
-        tbody.innerHTML = assets.map(asset => `
-            <tr>
-                <td>
-                    <div class="asset-info">
-                        <div class="asset-icon">${asset.icon || '💰'}</div>
-                        <div>
-                            <div class="asset-name">${asset.name || asset.symbol}</div>
-                            <div class="asset-symbol">${asset.symbol}</div>
-                        </div>
-                    </div>
-                </td>
-                <td>${(asset.balance || 0).toLocaleString()} ${asset.symbol}</td>
-                <td id="price-${asset.symbol}">$${(asset.usdValue / asset.balance || 0).toFixed(2)}</td>
-                <td>$${(asset.usdValue || 0).toLocaleString()}</td>
-                <td id="change-${asset.symbol}" class="price-up">--</td>
-            </tr>
-        `).join('');
-    }
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text);
+            alert('Copié !');
+        }
 
-    function initChart(chartData) {
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
-        if (chart) chart.destroy();
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.labels || ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil'],
-                datasets: [{
-                    label: 'Valeur ($)',
-                    data: chartData.values || [0,0,0,0,0,0,0],
-                    borderColor: '#f5b042',
-                    backgroundColor: 'rgba(245, 176, 66, 0.05)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#f5b042',
-                    pointBorderColor: '#0a0c1a',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { labels: { color: '#8b8cae' } },
-                    tooltip: { mode: 'index', intersect: false, backgroundColor: '#1f2648', titleColor: '#f5b042', bodyColor: '#fff' }
-                },
-                scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8cae', callback: v => '$' + v.toLocaleString() } },
-                    x: { grid: { display: false }, ticks: { color: '#8b8cae' } }
-                }
+        async function sendTransaction() {
+            const to = document.getElementById('sendTo').value;
+            const amount = document.getElementById('sendAmount').value;
+            const symbol = document.getElementById('sendSymbol').value;
+            
+            if (!to || !amount) {
+                alert('Remplissez tous les champs');
+                return;
             }
-        });
-    }
-
-    // ========== WEBSOCKET PRIX TEMPS REEL ==========
-    function initWebSocket() {
-        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${protocol}//${location.host}`);
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.prices) {
-                for (const [symbol, priceData] of Object.entries(data.prices)) {
-                    const priceEl = document.getElementById(`price-${symbol}`);
-                    const changeEl = document.getElementById(`change-${symbol}`);
-                    if (priceEl) priceEl.innerText = `$${priceData.usd.toLocaleString()}`;
-                    if (changeEl) {
-                        changeEl.innerText = `${priceData.change24h >= 0 ? '+' : ''}${priceData.change24h?.toFixed(2)}%`;
-                        changeEl.className = priceData.change24h >= 0 ? 'price-up' : 'price-down';
-                    }
-                }
-            }
-        };
-    }
-
-    // ========== MODALS ==========
-    function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
-    function openReceiveModal() { 
-        document.getElementById('receiveModal').style.display = 'flex';
-        const user = JSON.parse(localStorage.getItem('user'));
-        document.getElementById('receiveAddress').innerText = user.walletAddress;
-    }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function copyAddress() {
-        navigator.clipboard.writeText(document.getElementById('receiveAddress').innerText);
-        showToast('Adresse copiée !');
-    }
-    function refreshDashboard() { loadDashboard(); showToast('Actualisation...'); }
-
-    // ========== TOAST ==========
-    function showToast(msg, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${msg}`;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    // ========== SEND FORM ==========
-    document.getElementById('sendForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const to = document.getElementById('sendTo').value;
-        const amount = document.getElementById('sendAmount').value;
-        try {
-            const res = await fetch(`${API_URL}/wallet/send`, {
+            
+            const response = await fetch(`${API_URL}/wallet/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ to, amount, symbol: 'BET' })
+                body: JSON.stringify({ to, amount, symbol })
             });
-            const data = await res.json();
-            if (data.success) { showToast('Transaction envoyée !', 'success'); closeModal('sendModal'); loadDashboard(); }
-            else showToast(data.error, 'error');
-        } catch(err) { showToast('Erreur réseau', 'error'); }
-    });
+            const data = await response.json();
+            if (data.success) {
+                alert('Transaction envoyée !');
+                closeModal('sendModal');
+                loadDashboard();
+            } else {
+                alert(data.error);
+            }
+        }
 
-    // ========== LOGOUT ==========
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.clear();
-        window.location.href = 'index.html';
-    });
+        function refreshData() { loadDashboard(); }
 
-    // ========== INIT ==========
-    loadDashboard();
-    initWebSocket();
+        // WebSocket pour prix temps réel
+        function initWebSocket() {
+            const ws = new WebSocket(`wss://${window.location.host}`);
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.prices) {
+                    for (const [symbol, price] of Object.entries(data.prices)) {
+                        const changeEl = document.getElementById(`change-${symbol}`);
+                        if (changeEl) {
+                            changeEl.innerText = `+${price.change24h}%`;
+                        }
+                    }
+                }
+            };
+        }
 
-    // Timeframe buttons
-    document.querySelectorAll('.time-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            // TODO: fetch historical data based on days
-        });
-    });
-</script>
+        loadDashboard();
+        initWebSocket();
+    </script>
 </body>
 </html>
