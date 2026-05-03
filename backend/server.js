@@ -51,6 +51,12 @@ app.get('/api/wallet/dashboard', (req, res) => {
                 { symbol: 'BNB', name: 'BNB Smart Chain', balance: 2.5, usdValue: 1320, icon: '🔶' },
                 { symbol: 'SOL', name: 'Solana', balance: 10, usdValue: 1400, icon: '◎' },
                 { symbol: 'USDT', name: 'Tether (BSC)', balance: 500, usdValue: 500, icon: '💵' }
+            ],
+            transactions: [
+                { type: 'receive', amount: 0.02, symbol: 'BTC', usdValue: 1140, date: new Date(Date.now() - 2*24*3600000).toISOString(), from: 'Binance' },
+                { type: 'send', amount: 0.5, symbol: 'ETH', usdValue: 1600, date: new Date(Date.now() - 5*24*3600000).toISOString(), to: '0x1234...5678' },
+                { type: 'receive', amount: 100, symbol: 'USDT', usdValue: 100, date: new Date(Date.now() - 8*24*3600000).toISOString(), from: 'Coinbase' },
+                { type: 'swap', amount: 2, symbol: 'BNB', usdValue: 1040, date: new Date(Date.now() - 12*24*3600000).toISOString() }
             ]
         }
     });
