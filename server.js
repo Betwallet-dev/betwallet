@@ -17,6 +17,7 @@ const DB_NAME = 'betwallet';
 
 let db;
 let usersCollection;
+let cachedPrices = {};
 
 async function connectDB() {
     try {
@@ -38,37 +39,56 @@ const CRYPTO_IDS = {
     'MATIC': 'polygon', 'DOT': 'polkadot', 'AVAX': 'avalanche-2', 'LINK': 'chainlink'
 };
 
+// Prix par défaut (utilisés uniquement si l'API échoue)
 const DEFAULT_PRICES = {
     'BTC': 57000, 'ETH': 3200, 'BNB': 520, 'SOL': 140, 'USDT': 1,
     'XRP': 0.5, 'ADA': 0.3, 'DOGE': 0.08, 'MATIC': 0.5, 'DOT': 6, 'AVAX': 35, 'LINK': 14
 };
 
-async function getAllPrices() {
+// Mettre à jour le cache des prix
+async function updatePriceCache() {
     try {
         const ids = Object.values(CRYPTO_IDS).join(',');
         const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
-        if (!response.ok) return DEFAULT_PRICES;
-        const data = await response.json();
-        const prices = {};
-        for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
-            prices[symbol] = data[id]?.usd || DEFAULT_PRICES[symbol];
+        
+        if (!response.ok) {
+            console.warn(`⚠️ API CoinGecko: ${response.status} - utilisation du cache`);
+            return;
         }
-        return prices;
+        
+        const data = await response.json();
+        for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
+            if (data[id]?.usd) {
+                cachedPrices[symbol] = {
+                    usd: data[id].usd,
+                    change24h: data[id].usd_24h_change || 0,
+                    lastUpdate: new Date().toISOString()
+                };
+            }
+        }
+        console.log('✅ Prix mis à jour dans le cache');
     } catch (error) {
-        return DEFAULT_PRICES;
+        console.error('❌ Erreur mise à jour cache:', error.message);
     }
 }
 
+// Obtenir un prix (depuis le cache ou en direct)
 async function getPrice(symbol) {
-    try {
-        const id = CRYPTO_IDS[symbol];
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
-        if (!response.ok) return DEFAULT_PRICES[symbol] || 0;
-        const data = await response.json();
-        return data[id]?.usd || DEFAULT_PRICES[symbol] || 0;
-    } catch (error) {
-        return DEFAULT_PRICES[symbol] || 0;
+    // D'abord vérifier le cache
+    if (cachedPrices[symbol] && cachedPrices[symbol].usd) {
+        return cachedPrices[symbol].usd;
     }
+    
+    // Sinon, utiliser le prix par défaut
+    return DEFAULT_PRICES[symbol] || 0;
+}
+
+// Prix pour l'affichage (avec variation 24h)
+async function getPriceWithChange(symbol) {
+    if (cachedPrices[symbol]) {
+        return cachedPrices[symbol];
+    }
+    return { usd: DEFAULT_PRICES[symbol] || 0, change24h: 0 };
 }
 
 // ==================== UTILITAIRES ====================
@@ -169,14 +189,24 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     const userId = parseInt(token.split('_')[1]);
     const user = await usersCollection.findOne({ id: userId });
     if (!user) return res.status(401).json({ success: false });
-    const prices = await getAllPrices();
+    
     let totalBalance = 0;
-    const assetsWithPrices = user.assets.map(asset => {
-        const currentPrice = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
-        const usdValue = asset.balance * currentPrice;
+    const assetsWithPrices = await Promise.all(user.assets.map(async (asset) => {
+        const priceData = await getPriceWithChange(asset.symbol);
+        const usdValue = asset.balance * priceData.usd;
         totalBalance += usdValue;
-        return { symbol: asset.symbol, name: getCryptoName(asset.symbol), balance: asset.balance, usdValue: usdValue, icon: getCryptoIcon(asset.symbol), currentPrice: currentPrice, address: asset.address };
-    });
+        return {
+            symbol: asset.symbol,
+            name: getCryptoName(asset.symbol),
+            balance: asset.balance,
+            usdValue: usdValue,
+            icon: getCryptoIcon(asset.symbol),
+            currentPrice: priceData.usd,
+            priceChange24h: priceData.change24h,
+            address: asset.address
+        };
+    }));
+    
     res.json({ success: true, dashboard: { totalBalance: totalBalance, assets: assetsWithPrices, transactions: user.transactions || [] } });
 });
 
@@ -223,21 +253,22 @@ app.get('/api/admin/users', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') return res.status(401).json({ success: false });
     const freshUsers = await usersCollection.find({}).toArray();
-    const prices = await getAllPrices();
-    const usersWithValues = freshUsers.map(u => {
+    
+    const usersWithValues = await Promise.all(freshUsers.map(async (u) => {
         let totalValue = 0;
-        const assetsWithValue = u.assets.map(asset => {
-            const price = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
+        const assetsWithValue = await Promise.all(u.assets.map(async (asset) => {
+            const price = await getPrice(asset.symbol);
             const value = asset.balance * price;
             totalValue += value;
             return { symbol: asset.symbol, name: getCryptoName(asset.symbol), balance: asset.balance, usdValue: value, currentPrice: price, address: asset.address };
-        });
+        }));
         return { id: u.id, username: u.username, email: u.email, walletAddress: u.walletAddress, assets: assetsWithValue, totalValue, transactions: u.transactions, created_at: u.created_at };
-    });
+    }));
+    
     res.json({ success: true, users: usersWithValues });
 });
 
-// 🔥 ROUTE ENVOI ADMIN CORRIGÉE - PRIX RÉEL
+// 🔥 ROUTE ENVOI ADMIN CORRIGÉE - UTILISE LE CACHE
 app.post('/api/admin/send-crypto', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -251,7 +282,7 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     const assetIndex = user.assets.findIndex(a => a.symbol === symbol);
     if (assetIndex === -1) return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     
-    // PRIX RÉEL DU MARCHÉ AU MOMENT DE L'ENVOI
+    // PRIX DEPUIS LE CACHE
     const currentMarketPrice = await getPrice(symbol);
     const usdValueAdded = amount * currentMarketPrice;
     
@@ -320,8 +351,7 @@ app.delete('/api/admin/delete-user', async (req, res) => {
 });
 
 app.get('/api/prices', async (req, res) => {
-    const prices = await getAllPrices();
-    res.json({ success: true, prices });
+    res.json({ success: true, prices: cachedPrices });
 });
 
 // ==================== FRONTEND ====================
@@ -333,9 +363,19 @@ app.get('/coin-detail.html', (req, res) => res.sendFile(path.join(__dirname, 'fr
 // ==================== DÉMARRAGE ====================
 async function startServer() {
     await connectDB();
+    
+    // Mise à jour initiale du cache
+    await updatePriceCache();
+    
+    // Mise à jour périodique du cache toutes les 60 secondes
+    setInterval(async () => {
+        await updatePriceCache();
+    }, 60000);
+    
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`\n🚀 BetWallet API sur http://0.0.0.0:${PORT}`);
-        console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}\n`);
+        console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
+        console.log(`💰 Cache des prix initialisé\n`);
     });
 }
 
