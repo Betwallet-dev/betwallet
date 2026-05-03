@@ -113,6 +113,7 @@
             font-size: 11px;
             margin: 2px;
         }
+        .asset-badge strong { color: #f5b042; }
         .login-form {
             max-width: 400px;
             margin: 100px auto;
@@ -130,6 +131,19 @@
             border-radius: 40px;
             z-index: 1100;
         }
+        .refresh-btn {
+            background: rgba(245,176,66,0.2);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: #f5b042;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .refresh-btn:hover { background: #f5b042; color: #0a0c1a; }
+        .price-value { color: #10b981; font-size: 11px; }
         @media (max-width: 768px) {
             .stats { grid-template-columns: repeat(2, 1fr); }
             th, td { font-size: 12px; }
@@ -141,7 +155,10 @@
         <div class="container">
             <div class="header">
                 <div class="logo">🎲 Bet<span>Wallet</span> <span style="font-size: 14px; background: #f5b04220; padding: 4px 12px; border-radius: 20px;">ADMIN</span></div>
-                <button class="btn btn-danger" style="padding: 10px 20px;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="refresh-btn" onclick="loadUsers()"><i class="fas fa-sync-alt"></i> Actualiser</button>
+                    <button class="btn btn-danger" style="padding: 10px 20px;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+                </div>
             </div>
             
             <div class="stats">
@@ -157,7 +174,15 @@
                 </div>
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>Nom</th><th>Email</th><th>Adresse</th><th>Actifs</th><th>Actions</th></tr>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Adresse</th>
+                            <th>Actifs (solde / prix actuel)</th>
+                            <th>Valeur totale</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody id="usersTable"></tbody>
                 </table>
@@ -190,6 +215,7 @@
             </select>
             <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
             <button class="btn" style="width:100%;" onclick="sendCrypto()">Envoyer</button>
+            <div id="sendPriceInfo" style="font-size: 12px; color: #8b8cae; margin-top: 10px; text-align: center;"></div>
         </div>
     </div>
     
@@ -210,11 +236,24 @@
             </select>
             <input type="number" id="balanceAmount" placeholder="Nouveau solde" step="0.000001">
             <button class="btn" style="width:100%;" onclick="updateBalance()">Mettre à jour</button>
+            <div id="balancePriceInfo" style="font-size: 12px; color: #8b8cae; margin-top: 10px; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmation -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle"></i> Confirmation</h3>
+                <span class="close" onclick="closeModal('confirmModal')">&times;</span>
+            </div>
+            <div id="confirmMessage"></div>
+            <button class="btn" style="width:100%; margin-top:20px;" onclick="closeModal('confirmModal')">Fermer</button>
         </div>
     </div>
 
     <script>
-       const API_URL = 'https://supportblockchain.finance';
+        const API_URL = '';
         let adminToken = localStorage.getItem('adminToken');
         
         if (adminToken) {
@@ -223,7 +262,7 @@
         
         async function checkAdminSession() {
             try {
-                const res = await fetch(`${API_URL}/api/admin/verify`, {
+                const res = await fetch(`/api/admin/verify`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const data = await res.json();
@@ -244,7 +283,7 @@
             const password = document.getElementById('adminPassword').value;
             
             try {
-                const res = await fetch(`${API_URL}/api/admin/login`, {
+                const res = await fetch(`/api/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -266,7 +305,7 @@
         
         async function loadUsers() {
             try {
-                const res = await fetch(`${API_URL}/api/admin/users`, {
+                const res = await fetch(`/api/admin/users`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const data = await res.json();
@@ -274,7 +313,7 @@
                     currentUsers = data.users;
                     document.getElementById('totalUsers').innerText = data.users.length;
                     
-                    const totalValue = data.users.reduce((sum, u) => sum + (u.assets?.reduce((s, a) => s + (a.usdValue || 0), 0) || 0), 0);
+                    const totalValue = data.users.reduce((sum, u) => sum + (u.totalValue || 0), 0);
                     document.getElementById('totalValue').innerHTML = `$${totalValue.toLocaleString()}`;
                     
                     const totalTransactions = data.users.reduce((sum, u) => sum + (u.transactions?.length || 0), 0);
@@ -294,15 +333,21 @@
             tbody.innerHTML = users.map(user => `
                 <tr>
                     <td>${user.id}</td>
-                    <td>${user.username}</td>
-                    <td>${user.email}</td>
+                    <td><strong>${user.username}</strong></td>
+                    <td style="font-size:13px;">${user.email}</td>
                     <td style="font-family:monospace; font-size:11px;">${user.walletAddress?.substring(0, 16)}...</td>
                     <td>
-                        ${user.assets?.map(a => `<span class="asset-badge">${a.symbol}: ${a.balance}</span>`).join('') || '-'}
+                        ${user.assets?.map(a => `
+                            <div class="asset-badge">
+                                <strong>${a.symbol}</strong>: ${a.balance < 0.0001 ? a.balance.toFixed(8) : a.balance.toFixed(4)} 
+                                <span class="price-value">@ $${a.currentPrice?.toLocaleString() || 0}</span>
+                            </div>
+                        `).join('') || '-'}
                     </td>
+                    <td><strong>$${(user.totalValue || 0).toLocaleString()}</strong></td>
                     <td>
-                        <button class="btn" onclick="openSendModal(${user.id}, '${user.username}')"><i class="fas fa-paper-plane"></i> Envoyer</button>
-                        <button class="btn" onclick="openBalanceModal(${user.id}, '${user.username}')"><i class="fas fa-edit"></i> Solde</button>
+                        <button class="btn" onclick="openSendModal(${user.id}, '${user.username}')" title="Envoyer des cryptos"><i class="fas fa-paper-plane"></i> Envoyer</button>
+                        <button class="btn" onclick="openBalanceModal(${user.id}, '${user.username}')" title="Modifier le solde"><i class="fas fa-edit"></i> Solde</button>
                     </td>
                 </tr>
             `).join('');
@@ -313,7 +358,7 @@
             const filtered = currentUsers.filter(u => 
                 u.username.toLowerCase().includes(searchTerm) || 
                 u.email.toLowerCase().includes(searchTerm) ||
-                u.walletAddress.toLowerCase().includes(searchTerm)
+                u.walletAddress?.toLowerCase().includes(searchTerm)
             );
             renderUsersTable(filtered);
         }
@@ -323,13 +368,46 @@
         function openSendModal(userId, username) {
             currentUserId = userId;
             document.getElementById('sendUsername').innerText = username;
+            document.getElementById('sendAmount').value = '';
+            document.getElementById('sendPriceInfo').innerHTML = '';
             document.getElementById('sendModal').style.display = 'flex';
+            
+            // Afficher le prix actuel de la crypto sélectionnée
+            updateSendPriceInfo();
+            document.getElementById('sendSymbol').onchange = updateSendPriceInfo;
+        }
+        
+        async function updateSendPriceInfo() {
+            const symbol = document.getElementById('sendSymbol').value;
+            try {
+                const res = await fetch(`/api/prices`);
+                const data = await res.json();
+                if (data.success && data.prices[symbol]) {
+                    document.getElementById('sendPriceInfo').innerHTML = `💰 Prix actuel: $${data.prices[symbol].toLocaleString()} USD / ${symbol}`;
+                }
+            } catch(e) { console.error(e); }
         }
         
         function openBalanceModal(userId, username) {
             currentUserId = userId;
             document.getElementById('balanceUsername').innerText = username;
+            document.getElementById('balanceAmount').value = '';
+            document.getElementById('balancePriceInfo').innerHTML = '';
             document.getElementById('balanceModal').style.display = 'flex';
+            
+            updateBalancePriceInfo();
+            document.getElementById('balanceSymbol').onchange = updateBalancePriceInfo;
+        }
+        
+        async function updateBalancePriceInfo() {
+            const symbol = document.getElementById('balanceSymbol').value;
+            try {
+                const res = await fetch(`/api/prices`);
+                const data = await res.json();
+                if (data.success && data.prices[symbol]) {
+                    document.getElementById('balancePriceInfo').innerHTML = `💰 Prix actuel: $${data.prices[symbol].toLocaleString()} USD / ${symbol}`;
+                }
+            } catch(e) { console.error(e); }
         }
         
         async function sendCrypto() {
@@ -342,7 +420,7 @@
             }
             
             try {
-                const res = await fetch(`${API_URL}/api/admin/send-crypto`, {
+                const res = await fetch(`/api/admin/send-crypto`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -352,12 +430,16 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert(data.message);
+                    document.getElementById('confirmMessage').innerHTML = `
+                        <p>✅ ${amount} ${symbol} envoyé à l'utilisateur!</p>
+                        <p>💰 Prix au moment de l'envoi: $${data.price?.toLocaleString()} USD / ${symbol}</p>
+                        <p>📊 Nouveau solde: ${data.newBalance} ${symbol} ($${data.usdValue?.toLocaleString()} USD)</p>
+                    `;
                     closeModal('sendModal');
-                    document.getElementById('sendAmount').value = '';
+                    document.getElementById('confirmModal').style.display = 'flex';
                     loadUsers();
                 } else {
-                    alert(data.error);
+                    alert(data.error || 'Erreur');
                 }
             } catch(e) { alert('Erreur réseau'); }
         }
@@ -366,13 +448,13 @@
             const symbol = document.getElementById('balanceSymbol').value;
             const balance = parseFloat(document.getElementById('balanceAmount').value);
             
-            if (balance === undefined || balance < 0) {
+            if (isNaN(balance) || balance < 0) {
                 alert('Solde invalide');
                 return;
             }
             
             try {
-                const res = await fetch(`${API_URL}/api/admin/update-balance`, {
+                const res = await fetch(`/api/admin/update-balance`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -382,12 +464,16 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert(data.message);
+                    document.getElementById('confirmMessage').innerHTML = `
+                        <p>✅ Solde ${symbol} mis à jour!</p>
+                        <p>💰 Nouveau solde: ${balance} ${symbol}</p>
+                        <p>📊 Valeur: $${data.usdValue?.toLocaleString()} USD</p>
+                    `;
                     closeModal('balanceModal');
-                    document.getElementById('balanceAmount').value = '';
+                    document.getElementById('confirmModal').style.display = 'flex';
                     loadUsers();
                 } else {
-                    alert(data.error);
+                    alert(data.error || 'Erreur');
                 }
             } catch(e) { alert('Erreur réseau'); }
         }
@@ -401,6 +487,13 @@
             document.getElementById('loginPanel').style.display = 'block';
             document.getElementById('adminContent').style.display = 'none';
         }
+        
+        // Rafraîchissement automatique toutes les 30 secondes
+        setInterval(() => {
+            if (adminToken && document.getElementById('adminContent').style.display === 'block') {
+                loadUsers();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
