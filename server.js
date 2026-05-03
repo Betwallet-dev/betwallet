@@ -122,11 +122,73 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// Mot de passe oublié
+app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await new Promise((resolve) => {
+            db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => resolve(row));
+        });
+        if (!user) {
+            return res.json({ success: true, message: 'Si cet email existe, vous recevrez un lien.' });
+        }
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpires = new Date(Date.now() + 3600000);
+        await new Promise((resolve, reject) => {
+            db.run(`UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?`,
+                [resetToken, resetTokenExpires.toISOString(), user.id],
+                (err) => { if (err) reject(err); else resolve(); });
+        });
+        res.json({ success: true, resetToken: resetToken });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/auth/verify-reset-token', async (req, res) => {
+    try {
+        const { token } = req.body;
+        const user = await new Promise((resolve) => {
+            db.get('SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > ?',
+                [token, new Date().toISOString()], (err, row) => resolve(row));
+        });
+        if (!user) {
+            return res.status(400).json({ success: false, error: 'Lien invalide ou expiré' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, error: 'Mot de passe trop court' });
+        }
+        const user = await new Promise((resolve) => {
+            db.get('SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > ?',
+                [token, new Date().toISOString()], (err, row) => resolve(row));
+        });
+        if (!user) {
+            return res.status(400).json({ success: false, error: 'Lien invalide ou expiré' });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await new Promise((resolve, reject) => {
+            db.run(`UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?`,
+                [hashedPassword, user.id], (err) => { if (err) reject(err); else resolve(); });
+        });
+        res.json({ success: true, message: 'Mot de passe réinitialisé' });
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
 // Dashboard
 app.get('/api/wallet/dashboard', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false });
-    
     const userId = token.split('_')[1];
     db.all('SELECT * FROM assets WHERE user_id = ?', [userId], (err, assets) => {
         const totalBalance = assets.reduce((sum, a) => sum + (a.usd_value || 0), 0);
@@ -145,9 +207,31 @@ app.post('/api/wallet/send', (req, res) => {
     res.json({ success: true, message: 'Transaction simulée' });
 });
 
+// Routes admin
+app.post('/api/admin/login', async (req, res) => {
+    const { email, password } = req.body;
+    if (email === 'admin@betwallet.com' && password === 'Admin123!') {
+        res.json({ success: true, token: 'admin_token' });
+    } else {
+        res.status(401).json({ success: false, error: 'Identifiants incorrects' });
+    }
+});
+
+app.get('/api/admin/users', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token !== 'admin_token') return res.status(401).json({ success: false });
+    db.all('SELECT id, username, email, wallet_address, total_balance, created_at FROM users', (err, users) => {
+        res.json({ success: true, users: users || [] });
+    });
+});
+
 // Frontend
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'admin.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
