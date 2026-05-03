@@ -11,35 +11,44 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// ==================== STOCKAGE PERSISTANT ====================
-const DATA_FILE = path.join(__dirname, 'users.json');
+// ==================== DOSSIER DE DONNÉES PERSISTANT ====================
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-// Fonction pour charger les utilisateurs depuis le fichier
+// Créer le dossier data s'il n'existe pas
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    console.log(`📁 Dossier créé: ${DATA_DIR}`);
+}
+
+// ==================== FONCTIONS DE STOCKAGE ====================
 function loadUsers() {
     try {
-        if (fs.existsSync(DATA_FILE)) {
-            const data = fs.readFileSync(DATA_FILE, 'utf8');
+        if (fs.existsSync(USERS_FILE)) {
+            const data = fs.readFileSync(USERS_FILE, 'utf8');
             const saved = JSON.parse(data);
-            console.log(`✅ ${saved.users?.length || 0} utilisateurs chargés`);
+            console.log(`✅ ${saved.users?.length || 0} utilisateurs chargés depuis ${USERS_FILE}`);
             return {
                 users: saved.users || [],
                 nextId: saved.nextId || 1
             };
+        } else {
+            console.log('📄 Aucun fichier users.json trouvé, création d\'un nouveau fichier');
+            return { users: [], nextId: 1 };
         }
     } catch (e) {
-        console.error('Erreur chargement:', e);
+        console.error('❌ Erreur chargement:', e);
+        return { users: [], nextId: 1 };
     }
-    return { users: [], nextId: 1 };
 }
 
-// Fonction pour sauvegarder les utilisateurs
 function saveUsers(usersData, nextIdData) {
     try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify({ users: usersData, nextId: nextIdData }, null, 2));
-        console.log(`💾 ${usersData.length} utilisateurs sauvegardés`);
+        fs.writeFileSync(USERS_FILE, JSON.stringify({ users: usersData, nextId: nextIdData }, null, 2));
+        console.log(`💾 ${usersData.length} utilisateurs sauvegardés dans ${USERS_FILE}`);
         return true;
     } catch (e) {
-        console.error('Erreur sauvegarde:', e);
+        console.error('❌ Erreur sauvegarde:', e);
         return false;
     }
 }
@@ -47,41 +56,35 @@ function saveUsers(usersData, nextIdData) {
 // Chargement initial
 let { users, nextId } = loadUsers();
 
-// Fonction helper pour sauvegarder l'état actuel
+// Sauvegarde automatique après chaque modification
 function persistUsers() {
     saveUsers(users, nextId);
 }
 
 // ==================== PRIX TEMPS RÉEL ====================
 const CRYPTO_IDS = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-    'BNB': 'binancecoin',
-    'SOL': 'solana',
-    'USDT': 'tether'
+    'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binancecoin', 'SOL': 'solana',
+    'USDT': 'tether', 'XRP': 'ripple', 'ADA': 'cardano', 'DOGE': 'dogecoin',
+    'MATIC': 'polygon', 'DOT': 'polkadot', 'AVAX': 'avalanche-2', 'LINK': 'chainlink'
 };
 
 const DEFAULT_PRICES = {
-    'BTC': 57000,
-    'ETH': 3200,
-    'BNB': 520,
-    'SOL': 140,
-    'USDT': 1
+    'BTC': 57000, 'ETH': 3200, 'BNB': 520, 'SOL': 140, 'USDT': 1,
+    'XRP': 0.5, 'ADA': 0.3, 'DOGE': 0.08, 'MATIC': 0.5, 'DOT': 6, 'AVAX': 35, 'LINK': 14
 };
 
 async function getAllPrices() {
     try {
         const ids = Object.values(CRYPTO_IDS).join(',');
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
         const data = await response.json();
-        
         const prices = {};
         for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
             prices[symbol] = data[id]?.usd || DEFAULT_PRICES[symbol];
         }
         return prices;
     } catch (error) {
-        console.error('Erreur récupération prix:', error);
+        console.error('Erreur API prix:', error);
         return DEFAULT_PRICES;
     }
 }
@@ -89,12 +92,10 @@ async function getAllPrices() {
 async function getPrice(symbol) {
     try {
         const id = CRYPTO_IDS[symbol];
-        if (!id) return DEFAULT_PRICES[symbol] || 0;
         const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
         const data = await response.json();
         return data[id]?.usd || DEFAULT_PRICES[symbol] || 0;
     } catch (error) {
-        console.error(`Erreur prix ${symbol}:`, error);
         return DEFAULT_PRICES[symbol] || 0;
     }
 }
@@ -102,37 +103,42 @@ async function getPrice(symbol) {
 // ==================== UTILITAIRES ====================
 const adminEmail = 'admin@betwallet.com';
 const adminPassword = 'Admin123!';
-const cryptoSymbols = ['BTC', 'ETH', 'BNB', 'SOL', 'USDT'];
+
+const ALL_CRYPTOS = [
+    'BTC', 'ETH', 'BNB', 'SOL', 'USDT', 'XRP', 'ADA', 'DOGE', 'MATIC', 'DOT', 'AVAX', 'LINK'
+];
+
+function getCryptoName(symbol) {
+    const names = {
+        'BTC': 'Bitcoin', 'ETH': 'Ethereum', 'BNB': 'BNB Smart Chain', 'SOL': 'Solana',
+        'USDT': 'Tether', 'XRP': 'Ripple', 'ADA': 'Cardano', 'DOGE': 'Dogecoin',
+        'MATIC': 'Polygon', 'DOT': 'Polkadot', 'AVAX': 'Avalanche', 'LINK': 'Chainlink'
+    };
+    return names[symbol] || symbol;
+}
+
+function getCryptoIcon(symbol) {
+    const icons = {
+        'BTC': '₿', 'ETH': 'Ξ', 'BNB': '🔶', 'SOL': '◎', 'USDT': '💵',
+        'XRP': '💎', 'ADA': '🔷', 'DOGE': '🐕', 'MATIC': '🔺', 'DOT': '⛓️', 'AVAX': '❄️', 'LINK': '🔗'
+    };
+    return icons[symbol] || '💰';
+}
 
 function generateWalletAddress() {
     return `0x${crypto.randomBytes(20).toString('hex')}`;
 }
 
-function getCryptoName(symbol) {
-    const names = {
-        'BTC': 'Bitcoin',
-        'ETH': 'Ethereum',
-        'BNB': 'BNB Smart Chain',
-        'SOL': 'Solana',
-        'USDT': 'Tether'
-    };
-    return names[symbol] || symbol;
+function generateCryptoAddress(symbol) {
+    return `${symbol.toLowerCase()}_${crypto.randomBytes(16).toString('hex')}`;
 }
-
-const CRYPTO_ICONS = {
-    'BTC': '₿',
-    'ETH': 'Ξ',
-    'BNB': '🔶',
-    'SOL': '◎',
-    'USDT': '💵'
-};
 
 // ==================== ROUTES ====================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API running' });
 });
 
-// Inscription - SOLDE ZÉRO
+// INSCRIPTION
 app.post('/api/auth/register', (req, res) => {
     const { username, email, password } = req.body;
     
@@ -140,7 +146,7 @@ app.post('/api/auth/register', (req, res) => {
         return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
     }
     
-    // Recharger les utilisateurs pour éviter les conflits
+    // Recharger pour éviter les conflits
     const { users: freshUsers, nextId: freshNextId } = loadUsers();
     
     if (freshUsers.find(u => u.email === email)) {
@@ -150,12 +156,13 @@ app.post('/api/auth/register', (req, res) => {
     const userId = freshNextId;
     const walletAddress = generateWalletAddress();
     
-    const assets = cryptoSymbols.map(symbol => ({
+    // Créer les actifs pour TOUTES les cryptos (solde 0)
+    const assets = ALL_CRYPTOS.map(symbol => ({
         symbol: symbol,
         name: getCryptoName(symbol),
         balance: 0,
         usdValue: 0,
-        address: `${symbol.toLowerCase()}_${crypto.randomBytes(16).toString('hex')}`
+        address: generateCryptoAddress(symbol)
     }));
     
     const newUser = {
@@ -185,14 +192,14 @@ app.post('/api/auth/register', (req, res) => {
     });
 });
 
-// Connexion
+// CONNEXION
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
     
-    // Recharger les utilisateurs pour avoir les dernières données
+    // Recharger depuis le fichier pour avoir les dernières données
     const { users: freshUsers } = loadUsers();
-    
     const user = freshUsers.find(u => u.email === email && u.password === password);
+    
     if (!user) {
         return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
     }
@@ -210,7 +217,7 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Mot de passe oublié
+// MOT DE PASSE OUBLIÉ
 app.post('/api/auth/forgot-password', (req, res) => {
     const { email } = req.body;
     const { users: freshUsers } = loadUsers();
@@ -230,7 +237,7 @@ app.post('/api/auth/reset-password', (req, res) => {
     res.json({ success: true, message: 'Mot de passe réinitialisé' });
 });
 
-// DASHBOARD - avec prix temps réel
+// DASHBOARD
 app.get('/api/wallet/dashboard', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
@@ -238,8 +245,6 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    
-    // Recharger les utilisateurs pour avoir les dernières données
     const { users: freshUsers } = loadUsers();
     const user = freshUsers.find(u => u.id === userId);
     
@@ -247,7 +252,6 @@ app.get('/api/wallet/dashboard', async (req, res) => {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    // Mettre à jour les valeurs avec les prix actuels
     const prices = await getAllPrices();
     let totalBalance = 0;
     
@@ -261,7 +265,7 @@ app.get('/api/wallet/dashboard', async (req, res) => {
             name: getCryptoName(asset.symbol),
             balance: asset.balance,
             usdValue: usdValue,
-            icon: CRYPTO_ICONS[asset.symbol] || '💰',
+            icon: getCryptoIcon(asset.symbol),
             currentPrice: currentPrice,
             address: asset.address
         };
@@ -277,7 +281,7 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     });
 });
 
-// Envoyer une transaction (utilisateur)
+// ENVOYER TRANSACTION
 app.post('/api/wallet/send', async (req, res) => {
     const { to, amount, symbol } = req.body;
     const token = req.headers.authorization?.split(' ')[1];
@@ -287,8 +291,6 @@ app.post('/api/wallet/send', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    
-    // Recharger les utilisateurs
     let { users: freshUsers, nextId: freshNextId } = loadUsers();
     const userIndex = freshUsers.findIndex(u => u.id === userId);
     
@@ -319,13 +321,12 @@ app.post('/api/wallet/send', async (req, res) => {
         status: 'completed'
     });
     
-    // Sauvegarder
     saveUsers(freshUsers, freshNextId);
     users = freshUsers;
     
     res.json({
         success: true,
-        message: `${amount} ${symbol} envoyé à ${to}`,
+        message: `${amount} ${symbol} envoyé`,
         usdValue: usdValue,
         priceAtTime: price
     });
@@ -350,14 +351,12 @@ app.get('/api/admin/verify', (req, res) => {
     }
 });
 
-// Récupérer tous les utilisateurs (admin)
 app.get('/api/admin/users', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
         return res.status(401).json({ success: false });
     }
     
-    // Recharger les utilisateurs depuis le fichier
     const { users: freshUsers } = loadUsers();
     const prices = await getAllPrices();
     
@@ -392,7 +391,6 @@ app.get('/api/admin/users', async (req, res) => {
     res.json({ success: true, users: usersWithValues });
 });
 
-// Envoyer des cryptos à un utilisateur (admin)
 app.post('/api/admin/send-crypto', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -401,11 +399,6 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     
     const { userId, symbol, amount } = req.body;
     
-    if (!userId || !symbol || !amount || amount <= 0) {
-        return res.status(400).json({ success: false, error: 'Données invalides' });
-    }
-    
-    // Recharger les utilisateurs
     let { users: freshUsers, nextId: freshNextId } = loadUsers();
     const userIndex = freshUsers.findIndex(u => u.id === userId);
     
@@ -436,7 +429,6 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         status: 'completed'
     });
     
-    // Sauvegarder
     saveUsers(freshUsers, freshNextId);
     users = freshUsers;
     
@@ -445,12 +437,10 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         message: `${amount} ${symbol} envoyé à ${user.username}`,
         priceAtTime: priceAtTime,
         usdValue: usdValueAdded,
-        newBalance: asset.balance,
-        newUsdValue: asset.balance * priceAtTime
+        newBalance: asset.balance
     });
 });
 
-// Modifier le solde d'une crypto (admin)
 app.post('/api/admin/update-balance', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -459,11 +449,6 @@ app.post('/api/admin/update-balance', async (req, res) => {
     
     const { userId, symbol, balance } = req.body;
     
-    if (!userId || !symbol || balance === undefined || balance < 0) {
-        return res.status(400).json({ success: false, error: 'Données invalides' });
-    }
-    
-    // Recharger les utilisateurs
     let { users: freshUsers, nextId: freshNextId } = loadUsers();
     const userIndex = freshUsers.findIndex(u => u.id === userId);
     
@@ -479,10 +464,8 @@ app.post('/api/admin/update-balance', async (req, res) => {
     }
     
     const currentPrice = await getPrice(symbol);
-    
     asset.balance = balance;
     
-    // Sauvegarder
     saveUsers(freshUsers, freshNextId);
     users = freshUsers;
     
@@ -495,7 +478,6 @@ app.post('/api/admin/update-balance', async (req, res) => {
     });
 });
 
-// MODIFIER L'ADRESSE D'UNE CRYPTO POUR UN UTILISATEUR (admin)
 app.post('/api/admin/update-address', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -504,11 +486,6 @@ app.post('/api/admin/update-address', (req, res) => {
     
     const { userId, symbol, newAddress } = req.body;
     
-    if (!userId || !symbol || !newAddress) {
-        return res.status(400).json({ success: false, error: 'Données invalides' });
-    }
-    
-    // Recharger les utilisateurs
     let { users: freshUsers, nextId: freshNextId } = loadUsers();
     const userIndex = freshUsers.findIndex(u => u.id === userId);
     
@@ -524,19 +501,15 @@ app.post('/api/admin/update-address', (req, res) => {
     }
     
     asset.address = newAddress;
-    
-    // Sauvegarder
     saveUsers(freshUsers, freshNextId);
     users = freshUsers;
     
     res.json({
         success: true,
-        message: `Adresse ${symbol} mise à jour pour ${user.username}`,
-        newAddress: newAddress
+        message: `Adresse ${symbol} mise à jour pour ${user.username}`
     });
 });
 
-// Supprimer un utilisateur (admin)
 app.delete('/api/admin/delete-user', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -545,7 +518,6 @@ app.delete('/api/admin/delete-user', (req, res) => {
     
     const { userId } = req.body;
     
-    // Recharger les utilisateurs
     let { users: freshUsers, nextId: freshNextId } = loadUsers();
     const index = freshUsers.findIndex(u => u.id === userId);
     
@@ -554,15 +526,12 @@ app.delete('/api/admin/delete-user', (req, res) => {
     }
     
     freshUsers.splice(index, 1);
-    
-    // Sauvegarder
     saveUsers(freshUsers, freshNextId);
     users = freshUsers;
     
     res.json({ success: true, message: 'Utilisateur supprimé' });
 });
 
-// Route pour obtenir les prix en temps réel
 app.get('/api/prices', async (req, res) => {
     const prices = await getAllPrices();
     res.json({ success: true, prices: prices });
@@ -589,6 +558,7 @@ app.get('/coin-detail.html', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
     console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-    console.log(`📁 Fichier de données: ${DATA_FILE}`);
-    console.log(`👥 Utilisateurs chargés: ${users.length}\n`);
+    console.log(`📁 Dossier données: ${DATA_DIR}`);
+    console.log(`📄 Fichier utilisateurs: ${USERS_FILE}`);
+    console.log(`👥 ${users.length} utilisateurs en mémoire\n`);
 });
