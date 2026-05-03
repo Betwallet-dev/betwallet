@@ -11,10 +11,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Fichier de stockage persistant
+// Stockage persistant
 const DATA_FILE = path.join(__dirname, 'users.json');
-
-// Charger les utilisateurs depuis le fichier
 let users = [];
 let nextId = 1;
 
@@ -33,17 +31,44 @@ function saveUsers() {
     console.log(`💾 ${users.length} utilisateurs sauvegardés`);
 }
 
+// ==================== PRIX TEMPS RÉEL ====================
+async function getRealTimePrice(symbol) {
+    try {
+        const mapping = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'BNB': 'binancecoin',
+            'SOL': 'solana',
+            'USDT': 'tether'
+        };
+        
+        const id = mapping[symbol];
+        if (!id) return 0;
+        
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+        const data = await response.json();
+        return data[id]?.usd || 0;
+    } catch (error) {
+        console.error(`Erreur prix ${symbol}:`, error);
+        const defaults = { BTC: 57000, ETH: 3200, BNB: 520, SOL: 140, USDT: 1 };
+        return defaults[symbol] || 0;
+    }
+}
+
+async function updateUserPrices(user) {
+    for (const asset of user.assets) {
+        const price = await getRealTimePrice(asset.symbol);
+        asset.usdValue = asset.balance * price;
+    }
+}
+
+// ==================== UTILITAIRES ====================
 const adminEmail = 'admin@betwallet.com';
 const adminPassword = 'Admin123!';
 const cryptoSymbols = ['BTC', 'ETH', 'BNB', 'SOL', 'USDT'];
 
 function generateWalletAddress() {
     return `0x${crypto.randomBytes(20).toString('hex')}`;
-}
-
-function getCryptoPrice(symbol) {
-    const prices = { BTC: 57000, ETH: 3200, BNB: 520, SOL: 140, USDT: 1 };
-    return prices[symbol] || 0;
 }
 
 function getCryptoName(symbol) {
@@ -110,8 +135,8 @@ app.post('/api/auth/login', (req, res) => {
     res.json({ success: true, token, user: { id: user.id, username: user.username, email: user.email, walletAddress: user.walletAddress } });
 });
 
-// Dashboard
-app.get('/api/wallet/dashboard', (req, res) => {
+// Dashboard avec prix temps réel
+app.get('/api/wallet/dashboard', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false });
     
@@ -119,20 +144,34 @@ app.get('/api/wallet/dashboard', (req, res) => {
     const user = users.find(u => u.id === userId);
     if (!user) return res.status(401).json({ success: false });
     
+    await updateUserPrices(user);
+    saveUsers();
+    
     const totalBalance = user.assets.reduce((sum, a) => sum + (a.usdValue || 0), 0);
     const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+    
+    // Récupérer les prix individuels
+    const prices = {};
+    for (const symbol of cryptoSymbols) {
+        prices[symbol] = await getRealTimePrice(symbol);
+    }
     
     res.json({
         success: true,
         dashboard: {
             totalBalance: totalBalance,
-            assets: user.assets.map(a => ({ ...a, name: getCryptoName(a.symbol), icon: icons[a.symbol] || '💰' })),
+            assets: user.assets.map(a => ({ 
+                ...a, 
+                name: getCryptoName(a.symbol), 
+                icon: icons[a.symbol] || '💰',
+                currentPrice: prices[a.symbol]
+            })),
             transactions: user.transactions || []
         }
     });
 });
 
-app.post('/api/wallet/send', (req, res) => {
+app.post('/api/wallet/send', async (req, res) => {
     const { to, amount, symbol } = req.body;
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false });
@@ -146,13 +185,15 @@ app.post('/api/wallet/send', (req, res) => {
         return res.status(400).json({ success: false, error: 'Solde insuffisant' });
     }
     
+    const price = await getRealTimePrice(symbol);
+    
     asset.balance -= amount;
-    asset.usdValue = asset.balance * getCryptoPrice(symbol);
+    asset.usdValue = asset.balance * price;
     user.transactions.unshift({
         type: 'send',
         symbol, amount, to,
         date: new Date().toISOString(),
-        usdValue: amount * getCryptoPrice(symbol)
+        usdValue: amount * price
     });
     saveUsers();
     
@@ -185,31 +226,33 @@ app.get('/api/admin/users', (req, res) => {
     res.json({ success: true, users: users.map(u => ({ ...u, password: undefined })) });
 });
 
-app.post('/api/admin/send-crypto', (req, res) => {
+app.post('/api/admin/send-crypto', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') return res.status(401).json({ success: false });
     
     const { userId, symbol, amount } = req.body;
     const user = users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
+    if (!user) return res.status(404).json({ success: false });
     
     const asset = user.assets.find(a => a.symbol === symbol);
     if (!asset) return res.status(404).json({ success: false });
     
+    const price = await getRealTimePrice(symbol);
+    
     asset.balance += amount;
-    asset.usdValue = asset.balance * getCryptoPrice(symbol);
+    asset.usdValue = asset.balance * price;
     user.transactions.unshift({
         type: 'receive',
         symbol, amount, from: 'Admin',
         date: new Date().toISOString(),
-        usdValue: amount * getCryptoPrice(symbol)
+        usdValue: amount * price
     });
     saveUsers();
     
-    res.json({ success: true, message: `${amount} ${symbol} envoyé à ${user.username}` });
+    res.json({ success: true, message: `${amount} ${symbol} envoyé (${price}$/unité)`, price: price });
 });
 
-app.post('/api/admin/update-balance', (req, res) => {
+app.post('/api/admin/update-balance', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') return res.status(401).json({ success: false });
     
@@ -220,11 +263,13 @@ app.post('/api/admin/update-balance', (req, res) => {
     const asset = user.assets.find(a => a.symbol === symbol);
     if (!asset) return res.status(404).json({ success: false });
     
+    const price = await getRealTimePrice(symbol);
+    
     asset.balance = balance;
-    asset.usdValue = balance * getCryptoPrice(symbol);
+    asset.usdValue = balance * price;
     saveUsers();
     
-    res.json({ success: true, message: `Solde ${symbol} mis à jour` });
+    res.json({ success: true, message: `Solde ${symbol} mis à jour (${price}$/unité)`, price: price });
 });
 
 app.delete('/api/admin/delete-user', (req, res) => {
