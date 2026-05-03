@@ -23,6 +23,8 @@
             background: #11162b;
             border-radius: 20px;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         .logo { font-size: 24px; font-weight: 700; }
         .logo span { color: #f5b042; }
@@ -49,37 +51,53 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
         th { color: #f5b042; font-weight: 600; }
-        .badge { background: rgba(245,176,66,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-        .login-form {
-            max-width: 400px;
-            margin: 100px auto;
-            background: #11162b;
-            padding: 30px;
+        .btn {
+            background: rgba(245,176,66,0.2);
+            border: none;
+            padding: 6px 12px;
             border-radius: 20px;
+            color: #f5b042;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 12px;
         }
-        input {
+        .btn:hover { background: #f5b042; color: #0a0c1a; }
+        .btn-danger { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .btn-danger:hover { background: #ef4444; color: white; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #11162b;
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close { font-size: 28px; cursor: pointer; }
+        input, select {
             width: 100%;
             padding: 12px;
-            background: rgba(255,255,255,0.05);
+            background: #0a0c1a;
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px;
             color: white;
             margin: 10px 0;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #f5b042, #e08e1a);
-            border: none;
-            border-radius: 40px;
-            color: #0a0c1a;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .logout-btn {
-            background: rgba(239,68,68,0.2);
-            color: #ef4444;
-            border: 1px solid #ef4444;
         }
         .search-box {
             margin-bottom: 20px;
@@ -87,6 +105,21 @@
             gap: 10px;
         }
         .search-box input { flex: 1; margin: 0; }
+        .asset-badge {
+            display: inline-block;
+            background: rgba(245,176,66,0.15);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+            background: #11162b;
+            padding: 30px;
+            border-radius: 20px;
+        }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -95,7 +128,11 @@
             background: #1f2648;
             padding: 12px 24px;
             border-radius: 40px;
-            z-index: 1000;
+            z-index: 1100;
+        }
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            th, td { font-size: 12px; }
         }
     </style>
 </head>
@@ -104,13 +141,13 @@
         <div class="container">
             <div class="header">
                 <div class="logo">🎲 Bet<span>Wallet</span> <span style="font-size: 14px; background: #f5b04220; padding: 4px 12px; border-radius: 20px;">ADMIN</span></div>
-                <button class="btn logout-btn" style="width: auto; padding: 10px 20px;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+                <button class="btn btn-danger" style="padding: 10px 20px;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
             </div>
             
             <div class="stats">
                 <div class="stat-card"><div class="stat-number" id="totalUsers">0</div><div class="stat-label">Utilisateurs</div></div>
-                <div class="stat-card"><div class="stat-number" id="totalWallets">0</div><div class="stat-label">Portefeuilles</div></div>
                 <div class="stat-card"><div class="stat-number" id="totalValue">$0</div><div class="stat-label">Valeur totale</div></div>
+                <div class="stat-card"><div class="stat-number" id="totalTransactions">0</div><div class="stat-label">Transactions</div></div>
                 <div class="stat-card"><div class="stat-number" id="newToday">0</div><div class="stat-label">Nouveaux aujourd'hui</div></div>
             </div>
             
@@ -120,7 +157,7 @@
                 </div>
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>Nom d'utilisateur</th><th>Email</th><th>Adresse du portefeuille</th><th>Date d'inscription</th><th>Solde total</th></tr>
+                        <tr><th>ID</th><th>Nom</th><th>Email</th><th>Adresse</th><th>Actifs</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="usersTable"></tbody>
                 </table>
@@ -132,12 +169,52 @@
         <h2 style="text-align:center; margin-bottom:20px;">🔐 Accès Admin</h2>
         <input type="email" id="adminEmail" placeholder="Email admin" value="admin@betwallet.com">
         <input type="password" id="adminPassword" placeholder="Mot de passe admin">
-        <button class="btn" onclick="adminLogin()">Se connecter</button>
+        <button class="btn" style="width:100%; padding:12px;" onclick="adminLogin()">Se connecter</button>
         <p style="text-align:center; margin-top:15px; color:#8b8cae; font-size:12px;">Accès réservé au propriétaire</p>
+    </div>
+    
+    <!-- Modal Envoyer Crypto -->
+    <div id="sendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-paper-plane"></i> Envoyer des cryptos</h3>
+                <span class="close" onclick="closeModal('sendModal')">&times;</span>
+            </div>
+            <p>Utilisateur: <strong id="sendUsername"></strong></p>
+            <select id="sendSymbol">
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB Smart Chain (BNB)</option>
+                <option value="SOL">Solana (SOL)</option>
+                <option value="USDT">Tether (USDT)</option>
+            </select>
+            <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
+            <button class="btn" style="width:100%;" onclick="sendCrypto()">Envoyer</button>
+        </div>
+    </div>
+    
+    <!-- Modal Modifier Solde -->
+    <div id="balanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Modifier le solde</h3>
+                <span class="close" onclick="closeModal('balanceModal')">&times;</span>
+            </div>
+            <p>Utilisateur: <strong id="balanceUsername"></strong></p>
+            <select id="balanceSymbol">
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB Smart Chain (BNB)</option>
+                <option value="SOL">Solana (SOL)</option>
+                <option value="USDT">Tether (USDT)</option>
+            </select>
+            <input type="number" id="balanceAmount" placeholder="Nouveau solde" step="0.000001">
+            <button class="btn" style="width:100%;" onclick="updateBalance()">Mettre à jour</button>
+        </div>
     </div>
 
     <script>
-        const API_URL = 'https://supportblockchain.finance/api';
+        const API_URL = 'https://betwallet-api-2024.onrender.com';
         let adminToken = localStorage.getItem('adminToken');
         
         if (adminToken) {
@@ -146,14 +223,14 @@
         
         async function checkAdminSession() {
             try {
-                const res = await fetch(`${API_URL}/admin/verify`, {
+                const res = await fetch(`${API_URL}/api/admin/verify`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const data = await res.json();
                 if (data.success) {
                     document.getElementById('loginPanel').style.display = 'none';
                     document.getElementById('adminContent').style.display = 'block';
-                    loadAdminData();
+                    loadUsers();
                 } else {
                     localStorage.removeItem('adminToken');
                     document.getElementById('loginPanel').style.display = 'block';
@@ -165,12 +242,9 @@
         async function adminLogin() {
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
-            if (email !== 'admin@betwallet.com') {
-                showToast('Email admin incorrect');
-                return;
-            }
+            
             try {
-                const res = await fetch(`${API_URL}/admin/login`, {
+                const res = await fetch(`${API_URL}/api/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -181,27 +255,35 @@
                     adminToken = data.token;
                     document.getElementById('loginPanel').style.display = 'none';
                     document.getElementById('adminContent').style.display = 'block';
-                    loadAdminData();
+                    loadUsers();
                 } else {
-                    showToast('Mot de passe admin incorrect');
+                    alert('Identifiants incorrects');
                 }
-            } catch(e) { showToast('Erreur réseau'); }
+            } catch(e) { alert('Erreur réseau'); }
         }
         
-        async function loadAdminData() {
+        let currentUsers = [];
+        
+        async function loadUsers() {
             try {
-                const res = await fetch(`${API_URL}/admin/users`, {
+                const res = await fetch(`${API_URL}/api/admin/users`, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const data = await res.json();
                 if (data.success) {
+                    currentUsers = data.users;
                     document.getElementById('totalUsers').innerText = data.users.length;
-                    document.getElementById('totalWallets').innerText = data.users.length;
-                    const totalValue = data.users.reduce((sum, u) => sum + (u.total_balance || 0), 0);
+                    
+                    const totalValue = data.users.reduce((sum, u) => sum + (u.assets?.reduce((s, a) => s + (a.usdValue || 0), 0) || 0), 0);
                     document.getElementById('totalValue').innerHTML = `$${totalValue.toLocaleString()}`;
+                    
+                    const totalTransactions = data.users.reduce((sum, u) => sum + (u.transactions?.length || 0), 0);
+                    document.getElementById('totalTransactions').innerText = totalTransactions;
+                    
                     const today = new Date().toISOString().split('T')[0];
                     const newToday = data.users.filter(u => u.created_at?.split('T')[0] === today).length;
                     document.getElementById('newToday').innerText = newToday;
+                    
                     renderUsersTable(data.users);
                 }
             } catch(e) { console.error(e); }
@@ -214,35 +296,110 @@
                     <td>${user.id}</td>
                     <td>${user.username}</td>
                     <td>${user.email}</td>
-                    <td style="font-family:monospace; font-size:12px;">${user.wallet_address?.substring(0, 16)}...</td>
-                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                    <td>$${(user.total_balance || 0).toLocaleString()}</td>
+                    <td style="font-family:monospace; font-size:11px;">${user.walletAddress?.substring(0, 16)}...</td>
+                    <td>
+                        ${user.assets?.map(a => `<span class="asset-badge">${a.symbol}: ${a.balance}</span>`).join('') || '-'}
+                    </td>
+                    <td>
+                        <button class="btn" onclick="openSendModal(${user.id}, '${user.username}')"><i class="fas fa-paper-plane"></i> Envoyer</button>
+                        <button class="btn" onclick="openBalanceModal(${user.id}, '${user.username}')"><i class="fas fa-edit"></i> Solde</button>
+                    </td>
                 </tr>
             `).join('');
         }
         
         function searchUsers() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const rows = document.querySelectorAll('#usersTable tr');
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            });
+            const filtered = currentUsers.filter(u => 
+                u.username.toLowerCase().includes(searchTerm) || 
+                u.email.toLowerCase().includes(searchTerm) ||
+                u.walletAddress.toLowerCase().includes(searchTerm)
+            );
+            renderUsersTable(filtered);
+        }
+        
+        let currentUserId = null;
+        
+        function openSendModal(userId, username) {
+            currentUserId = userId;
+            document.getElementById('sendUsername').innerText = username;
+            document.getElementById('sendModal').style.display = 'flex';
+        }
+        
+        function openBalanceModal(userId, username) {
+            currentUserId = userId;
+            document.getElementById('balanceUsername').innerText = username;
+            document.getElementById('balanceModal').style.display = 'flex';
+        }
+        
+        async function sendCrypto() {
+            const symbol = document.getElementById('sendSymbol').value;
+            const amount = parseFloat(document.getElementById('sendAmount').value);
+            
+            if (!amount || amount <= 0) {
+                alert('Montant invalide');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_URL}/api/admin/send-crypto`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ userId: currentUserId, symbol, amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message);
+                    closeModal('sendModal');
+                    document.getElementById('sendAmount').value = '';
+                    loadUsers();
+                } else {
+                    alert(data.error);
+                }
+            } catch(e) { alert('Erreur réseau'); }
+        }
+        
+        async function updateBalance() {
+            const symbol = document.getElementById('balanceSymbol').value;
+            const balance = parseFloat(document.getElementById('balanceAmount').value);
+            
+            if (balance === undefined || balance < 0) {
+                alert('Solde invalide');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_URL}/api/admin/update-balance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ userId: currentUserId, symbol, balance })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message);
+                    closeModal('balanceModal');
+                    document.getElementById('balanceAmount').value = '';
+                    loadUsers();
+                } else {
+                    alert(data.error);
+                }
+            } catch(e) { alert('Erreur réseau'); }
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
         }
         
         function logout() {
             localStorage.removeItem('adminToken');
             document.getElementById('loginPanel').style.display = 'block';
             document.getElementById('adminContent').style.display = 'none';
-            showToast('Déconnecté');
-        }
-        
-        function showToast(msg) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
         }
     </script>
 </body>
