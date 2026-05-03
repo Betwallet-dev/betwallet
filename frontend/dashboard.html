@@ -78,7 +78,7 @@
             background: #f5b042;
         }
         
-        .crypto-list { padding: 0 20px; }
+        .crypto-list { padding: 0 20px; display: block; }
         .crypto-item {
             display: flex;
             justify-content: space-between;
@@ -107,6 +107,25 @@
         .crypto-price { font-size: 12px; }
         .price-up { color: #10b981; }
         .price-down { color: #ef4444; }
+        
+        .watchlist-section { padding: 0 20px; display: none; }
+        .watchlist-section.active { display: block; }
+        .default-watchlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .default-watchlist-item:hover {
+            background: rgba(245,176,66,0.05);
+            margin: 0 -10px;
+            padding: 15px 10px;
+            border-radius: 16px;
+        }
+        .watchlist-price-up { color: #10b981; }
+        .watchlist-price-down { color: #ef4444; }
         
         .bottom-nav {
             position: fixed;
@@ -137,7 +156,9 @@
             padding: 12px 24px;
             border-radius: 40px;
             z-index: 1100;
+            animation: fadeInUp 0.3s ease;
         }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         @media (max-width: 480px) {
             .total-amount { font-size: 36px; }
             .action-btn span { display: none; }
@@ -173,6 +194,10 @@
         <div style="text-align:center; padding:40px;">Chargement...</div>
     </div>
 
+    <div class="watchlist-section" id="watchlistSection">
+        <div style="text-align:center; padding:40px;">Chargement des prix...</div>
+    </div>
+
     <div class="bottom-nav">
         <div class="nav-item active" data-bottom="portfolio"><i class="fas fa-wallet"></i><span>Portefeuille</span></div>
         <div class="nav-item" data-bottom="popular"><i class="fas fa-chart-line"></i><span>Populaires</span></div>
@@ -189,7 +214,15 @@
         let userAssets = [];
         let marketPrices = {};
 
-        // Prix en temps réel depuis CoinGecko
+        const watchlistCoins = [
+            { symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', icon: '₿' },
+            { symbol: 'BNB', name: 'BNB Smart Chain', network: 'BSC', icon: '🔶' },
+            { symbol: 'ETH', name: 'Ethereum', network: 'ERC-20', icon: 'Ξ' },
+            { symbol: 'SOL', name: 'Solana', network: 'Solana', icon: '◎' },
+            { symbol: 'USDT', name: 'Tether', network: 'BNB Smart Chain (BSC)', icon: '💵' },
+            { symbol: 'USDT', name: 'Tether', network: 'Tron (TRC-20)', icon: '💵' }
+        ];
+
         async function fetchMarketPrices() {
             try {
                 const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,tether,binancecoin&vs_currencies=usd&include_24hr_change=true');
@@ -221,6 +254,7 @@
                     document.getElementById('totalBalance').innerHTML = `$${totalValue.toLocaleString()}`;
                     document.getElementById('portfolioValue').innerHTML = `≈ ${(totalValue / (prices.BTC?.usd || 57000)).toFixed(4)} BTC`;
                     renderCryptoList(userAssets, prices);
+                    renderWatchlist(prices);
                 }
             } catch(e) { console.error(e); }
         }
@@ -252,6 +286,40 @@
             }).join('');
         }
 
+        function renderWatchlist(prices) {
+            const container = document.getElementById('watchlistSection');
+            if (!container) return;
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; margin-top: 10px;">
+                    <h3 style="font-size: 16px; color: #f5b042;"><i class="fas fa-star"></i> Liste de suivi</h3>
+                    <p style="font-size: 12px; color: #8b8cae;">Prix en temps réel</p>
+                </div>
+                ${watchlistCoins.map(coin => {
+                    const priceData = prices[coin.symbol] || { usd: 0, change24h: 0 };
+                    const isPositive = priceData.change24h >= 0;
+                    return `
+                        <div class="default-watchlist-item" onclick="goToCoinDetail('${coin.symbol}', '${coin.name}', 0, 0)">
+                            <div class="crypto-left">
+                                <div class="crypto-icon">${coin.icon}</div>
+                                <div class="crypto-info">
+                                    <h4>${coin.name}</h4>
+                                    <p>${coin.network} • ${coin.symbol}</p>
+                                </div>
+                            </div>
+                            <div class="crypto-right">
+                                <div class="crypto-balance">$${priceData.usd.toLocaleString()}</div>
+                                <div class="crypto-price"><span class="${isPositive ? 'watchlist-price-up' : 'watchlist-price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                <div style="margin-top: 20px; padding: 15px; background: rgba(245,176,66,0.1); border-radius: 16px; text-align: center;">
+                    <i class="fas fa-star" style="color: #f5b042;"></i>
+                    <span style="font-size: 12px; color: #8b8cae;"> Ajoutez vos cryptos préférées à la liste de suivi</span>
+                </div>
+            `;
+        }
+
         function getIcon(symbol) {
             const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
             return icons[symbol] || '💰';
@@ -264,23 +332,32 @@
 
         function quickAction(action) {
             if (action === 'buy') alert('🔜 Acheter - Bientôt disponible');
-            else if (action === 'send') alert('🔜 Envoyer - Sélectionnez d\'abord une crypto');
-            else if (action === 'receive') alert('🔜 Recevoir - Sélectionnez d\'abord une crypto');
+            else if (action === 'send') alert('🔜 Envoyer - Sélectionnez une crypto dans votre portefeuille');
+            else if (action === 'receive') alert('🔜 Recevoir - Sélectionnez une crypto dans votre portefeuille');
             else if (action === 'swap') alert('🔜 Swap - Bientôt disponible');
         }
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-        // Navigation tabs
         document.querySelectorAll('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                if (tab.dataset.tab === 'watchlist') alert('📋 Liste de suivi à venir');
+                const cryptoList = document.getElementById('cryptoList');
+                const watchlist = document.getElementById('watchlistSection');
+                if (tab.dataset.tab === 'crypto') {
+                    cryptoList.style.display = 'block';
+                    watchlist.style.display = 'none';
+                } else {
+                    cryptoList.style.display = 'none';
+                    watchlist.style.display = 'block';
+                }
             });
         });
 
-        // Mise à jour automatique des prix toutes les 30 secondes
+        document.getElementById('cryptoList').style.display = 'block';
+        document.getElementById('watchlistSection').style.display = 'none';
+
         loadDashboard();
         setInterval(() => { loadDashboard(); }, 30000);
     </script>

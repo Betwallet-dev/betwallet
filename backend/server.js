@@ -48,9 +48,9 @@ app.get('/api/wallet/dashboard', (req, res) => {
             assets: [
                 { symbol: 'BTC', name: 'Bitcoin', balance: 0.05, usdValue: 2850, icon: '₿' },
                 { symbol: 'ETH', name: 'Ethereum', balance: 0.8, usdValue: 2400, icon: 'Ξ' },
-                { symbol: 'BNB', name: 'BNB', balance: 2.5, usdValue: 1320, icon: '🔶' },
+                { symbol: 'BNB', name: 'BNB Smart Chain', balance: 2.5, usdValue: 1320, icon: '🔶' },
                 { symbol: 'SOL', name: 'Solana', balance: 10, usdValue: 1400, icon: '◎' },
-                { symbol: 'USDT', name: 'Tether', balance: 500, usdValue: 500, icon: '💵' }
+                { symbol: 'USDT', name: 'Tether (BSC)', balance: 500, usdValue: 500, icon: '💵' }
             ]
         }
     });

@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetWallet - Détail</title>
+    <title>BetWallet - Détail Crypto</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -34,17 +33,12 @@
             cursor: pointer;
             font-size: 20px;
         }
-        .coin-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-        }
-        .coin-icon { font-size: 40px; }
+        .coin-header { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .coin-icon { font-size: 48px; }
         .coin-name h1 { font-size: 24px; margin-bottom: 4px; }
         .coin-name p { color: #8b8cae; font-size: 14px; }
         
-        .price-section { text-align: center; padding: 20px; }
+        .price-section { text-align: center; padding: 30px 20px; }
         .current-price { font-size: 48px; font-weight: 700; color: #f5b042; }
         .price-change { font-size: 16px; margin-top: 10px; }
         .price-up { color: #10b981; }
@@ -68,8 +62,8 @@
         
         .action-buttons {
             display: flex;
-            gap: 15px;
-            margin: 0 20px 20px 20px;
+            gap: 12px;
+            margin: 20px;
             flex-wrap: wrap;
         }
         .action-btn {
@@ -87,7 +81,6 @@
             gap: 8px;
             transition: all 0.2s;
         }
-        .action-btn i { font-size: 16px; }
         .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; border-color: #f5b042; }
         
         .modal {
@@ -116,7 +109,7 @@
             margin-bottom: 20px;
         }
         .close-modal { font-size: 28px; cursor: pointer; color: #8b8cae; }
-        .qr-container { text-align: center; padding: 20px; }
+        .qr-container { text-align: center; padding: 20px; background: white; border-radius: 16px; margin: 15px 0; }
         .address-box {
             background: #0a0c1a;
             padding: 12px;
@@ -198,66 +191,38 @@
         <button class="action-btn" onclick="openModal('sell')"><i class="fas fa-chart-line"></i> Vendre</button>
     </div>
 
-    <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>⬆️ Envoyer <span id="sendSymbolLabel">BTC</span></h3>
-                <span class="close-modal" onclick="closeModal('sendModal')">&times;</span>
-            </div>
+            <div class="modal-header"><h3>⬆️ Envoyer <span id="sendSymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('sendModal')">&times;</span></div>
             <input type="text" id="sendAddress" placeholder="Adresse du destinataire">
             <input type="number" id="sendAmount" placeholder="Montant">
             <button class="btn" onclick="sendTransaction()">Confirmer l'envoi</button>
         </div>
     </div>
 
-    <!-- Modal Recevoir -->
     <div id="receiveModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>⬇️ Recevoir <span id="receiveSymbolLabel">BTC</span></h3>
-                <span class="close-modal" onclick="closeModal('receiveModal')">&times;</span>
-            </div>
-            <div class="qr-container" id="qrCode"></div>
+            <div class="modal-header"><h3>⬇️ Recevoir <span id="receiveSymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('receiveModal')">&times;</span></div>
+            <div class="qr-container" id="qrCode"><div style="width:200px;height:200px;background:#eee;margin:0 auto;"></div></div>
             <div class="address-box" id="receiveAddress"></div>
             <button class="btn" onclick="copyAddress()">📋 Copier l'adresse</button>
         </div>
     </div>
 
-    <!-- Modal Acheter -->
     <div id="buyModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>🛒 Acheter <span id="buySymbolLabel">BTC</span></h3>
-                <span class="close-modal" onclick="closeModal('buyModal')">&times;</span>
-            </div>
-            <div class="form-group">
-                <label>Montant en EUR/USD</label>
-                <input type="number" id="buyFiatAmount" placeholder="Montant en USD">
-            </div>
-            <div class="form-group">
-                <label>Vous recevrez</label>
-                <input type="text" id="buyCryptoAmount" readonly style="background:#0a0c1a;">
-            </div>
+            <div class="modal-header"><h3>🛒 Acheter <span id="buySymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('buyModal')">&times;</span></div>
+            <input type="number" id="buyFiatAmount" placeholder="Montant en USD">
+            <input type="text" id="buyCryptoAmount" placeholder="Vous recevrez" readonly style="background:#0a0c1a;">
             <button class="btn" onclick="buyCrypto()">Confirmer l'achat</button>
         </div>
     </div>
 
-    <!-- Modal Vendre -->
     <div id="sellModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>📉 Vendre <span id="sellSymbolLabel">BTC</span></h3>
-                <span class="close-modal" onclick="closeModal('sellModal')">&times;</span>
-            </div>
-            <div class="form-group">
-                <label>Quantité à vendre</label>
-                <input type="number" id="sellAmount" placeholder="Montant en crypto">
-            </div>
-            <div class="form-group">
-                <label>Vous recevrez</label>
-                <input type="text" id="sellFiatAmount" readonly style="background:#0a0c1a;">
-            </div>
+            <div class="modal-header"><h3>📉 Vendre <span id="sellSymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('sellModal')">&times;</span></div>
+            <input type="number" id="sellAmount" placeholder="Quantité à vendre">
+            <input type="text" id="sellFiatAmount" placeholder="Vous recevrez" readonly style="background:#0a0c1a;">
             <button class="btn" onclick="sellCrypto()">Confirmer la vente</button>
         </div>
     </div>
@@ -285,16 +250,15 @@
 
         async function fetchPriceAndHistory() {
             try {
-                const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbols[coinData.symbol]}&vs_currencies=usd&include_24hr_change=true`);
-                const priceData = await priceRes.json();
                 const id = symbols[coinData.symbol];
+                if (!id) return;
+                const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`);
+                const priceData = await priceRes.json();
                 currentPrice = priceData[id]?.usd || 0;
                 priceChange24h = priceData[id]?.usd_24h_change || 0;
-                
                 document.getElementById('currentPrice').innerHTML = `$${currentPrice.toLocaleString()}`;
                 const changeClass = priceChange24h >= 0 ? 'price-up' : 'price-down';
-                const changeSign = priceChange24h >= 0 ? '+' : '';
-                document.getElementById('priceChange').innerHTML = `<span class="${changeClass}">${changeSign}${priceChange24h.toFixed(2)}% (24h)</span>`;
+                document.getElementById('priceChange').innerHTML = `<span class="${changeClass}">${priceChange24h >= 0 ? '+' : ''}${priceChange24h.toFixed(2)}% (24h)</span>`;
                 
                 const historyRes = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`);
                 const historyData = await historyRes.json();
@@ -350,21 +314,23 @@
             } else if (type === 'buy') {
                 document.getElementById('buySymbolLabel').innerHTML = coinData.symbol;
                 document.getElementById('buyModal').style.display = 'flex';
-                document.getElementById('buyFiatAmount').addEventListener('input', function() {
+                document.getElementById('buyFiatAmount').oninput = function() {
                     const amount = parseFloat(this.value);
                     if (!isNaN(amount) && currentPrice > 0) {
                         document.getElementById('buyCryptoAmount').value = (amount / currentPrice).toFixed(6);
                     }
-                });
+                };
             } else if (type === 'sell') {
                 document.getElementById('sellSymbolLabel').innerHTML = coinData.symbol;
                 document.getElementById('sellModal').style.display = 'flex';
-                document.getElementById('sellAmount').addEventListener('input', function() {
+                document.getElementById('sellAmount').oninput = function() {
                     const amount = parseFloat(this.value);
-                    if (!isNaN(amount) && currentPrice > 0) {
+                    if (!isNaN(amount) && currentPrice > 0 && amount <= coinData.balance) {
                         document.getElementById('sellFiatAmount').value = `$${(amount * currentPrice).toFixed(2)}`;
+                    } else if (amount > coinData.balance) {
+                        document.getElementById('sellFiatAmount').value = 'Solde insuffisant';
                     }
-                });
+                };
             }
         }
 
@@ -422,5 +388,6 @@
         fetchPriceAndHistory();
         setInterval(fetchPriceAndHistory, 30000);
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>
