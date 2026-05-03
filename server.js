@@ -10,12 +10,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Stockage temporaire (remplace la base de données)
+// Stockage temporaire (simule une base de données)
 const users = [];
+
+// ==================== ROUTES ====================
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'BetWallet API running' });
+    res.json({ status: 'OK', message: 'BetWallet API running', timestamp: new Date().toISOString() });
 });
 
 // Inscription
@@ -37,6 +39,8 @@ app.post('/api/auth/register', (req, res) => {
     users.push({ id: userId, username, email, password, walletAddress });
     
     const token = `fake_token_${userId}_${Date.now()}`;
+    
+    console.log(`📝 Nouvel utilisateur: ${username} (${email})`);
     
     res.json({
         success: true,
@@ -63,13 +67,14 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Dashboard (données simulées comme Trust Wallet)
+// Dashboard (données simulées style Trust Wallet)
 app.get('/api/wallet/dashboard', (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ success: false, error: 'Non autorisé' });
     }
     
+    // Données simulées comme Trust Wallet
     res.json({
         success: true,
         dashboard: {
@@ -88,9 +93,37 @@ app.get('/api/wallet/dashboard', (req, res) => {
     });
 });
 
-// Envoi de transaction (simulation)
+// Route balances (pour compatibilité)
+app.get('/api/wallet/balances', (req, res) => {
+    res.json({
+        success: true,
+        balances: {
+            bitcoin: 0.05,
+            ethereum: 0.8,
+            solana: 10,
+            usdt: 500
+        }
+    });
+});
+
+// Route seed (retourne une seed fictive)
+app.get('/api/wallet/seed', (req, res) => {
+    res.json({ success: true, seedPhrase: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon' });
+});
+
+// Route address
+app.get('/api/wallet/address/:symbol', (req, res) => {
+    const { symbol } = req.params;
+    res.json({ 
+        success: true, 
+        address: `0x${Math.random().toString(36).substring(2, 15)}${Date.now()}`
+    });
+});
+
+// Envoi de transaction
 app.post('/api/wallet/send', (req, res) => {
     const { to, amount, symbol } = req.body;
+    console.log(`💰 Transaction: ${amount} ${symbol} vers ${to}`);
     res.json({
         success: true,
         message: `Transaction de ${amount} ${symbol} vers ${to} simulée`,
@@ -106,5 +139,12 @@ app.get('/', (req, res) => {
 // Démarrer
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
-    console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📋 Routes disponibles:`);
+    console.log(`   POST /api/auth/register`);
+    console.log(`   POST /api/auth/login`);
+    console.log(`   GET  /api/wallet/dashboard`);
+    console.log(`   GET  /api/wallet/balances`);
+    console.log(`   GET  /api/wallet/seed`);
+    console.log(`   GET  /api/wallet/address/:symbol`);
+    console.log(`   POST /api/wallet/send`);
 });
