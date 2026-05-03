@@ -1,135 +1,167 @@
-const WalletModel = require('../models/wallet.model');
-const UserModel = require('../models/user.model');
+const bip39 = require('bip39');
+const { ethers } = require('ethers');
+const db = require('../database/init');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 class WalletController {
-    async getBalance(req, res) {
+    
+    // Étape 1: Générer la seed phrase
+    static async createWallet(req, res) {
         try {
-            const userId = req.user.id;
-            const user = UserModel.findById(userId);
-            
-            if (!user) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Utilisateur non trouvé' 
-                });
-            }
-
-            const wallet = WalletModel.getWalletByUserId(userId);
-            if (!wallet) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Portefeuille non trouvé' 
-                });
-            }
-
-            res.json({
-                success: true,
-                balance: wallet.balance,
-                assets: wallet.assets,
-                address: wallet.address
-            });
+            const seedPhrase = bip39.generateMnemonic(128);
+            res.json({ success: true, wallet: { seedPhrase: seedPhrase } });
         } catch (error) {
-            res.status(500).json({ 
-                success: false, 
-                error: 'Erreur serveur' 
-            });
+            console.error('Erreur création wallet:', error);
+            res.status(500).json({ success: false, error: error.message });
         }
     }
-
-    async getDashboardData(req, res) {
+    
+    // Étape 2: Confirmer et sauvegarder
+    static async confirmCreateWallet(req, res) {
         try {
-            const userId = req.user.id;
-            const user = UserModel.findById(userId);
-            const wallet = WalletModel.getWalletByUserId(userId);
+            const { seedPhrase } = req.body;
             
-            const totalBalance = wallet.assets.reduce((sum, asset) => sum + asset.usdValue, 0);
+            if (!bip39.validateMnemonic(seedPhrase)) {
+                return res.status(400).json({ success: false, error: 'Seed phrase invalide' });
+            }
             
-            // Données pour le graphique (7 derniers jours simulés)
-            const chartData = {
-                labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-                values: [totalBalance * 0.95, totalBalance * 0.97, totalBalance * 0.96, 
-                         totalBalance * 0.98, totalBalance * 0.99, totalBalance * 0.98, totalBalance]
-            };
-
-            res.json({
-                success: true,
-                dashboard: {
-                    totalBalance: totalBalance,
-                    betBalance: wallet.balance,
-                    assets: wallet.assets,
-                    recentTransactions: wallet.transactions.slice(0, 5),
-                    chartData: chartData
-                }
+            const ethWallet = ethers.Wallet.fromPhrase(seedPhrase);
+            const ethAddress = ethWallet.address;
+            
+            const username = `user_${Date.now()}`;
+            const email = `${username}@betwallet.temp`;
+            const hashedPassword = await bcrypt.hash('temp_' + Date.now(), 10);
+            
+            const userId = await new Promise((resolve, reject) => {
+                db.run(`INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)`,
+                    [username, email, hashedPassword, ethAddress],
+                    function(err) { if (err) reject(err); resolve(this.lastID); });
             });
+            
+            await new Promise((resolve, reject) => {
+                db.run(`INSERT INTO wallets (user_id, seed_phrase, eth_address) VALUES (?, ?, ?)`,
+                    [userId, seedPhrase, ethAddress], (err) => {
+                    if (err) reject(err); resolve();
+                });
+            });
+            
+            const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET || 'betwallet_secret', { expiresIn: '7d' });
+            
+            res.json({ success: true, token, user: { id: userId, username, email, walletAddress: ethAddress } });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ 
-                success: false, 
-                error: 'Erreur serveur' 
-            });
+            console.error('Erreur confirmation:', error);
+            res.status(500).json({ success: false, error: error.message });
         }
     }
-
-    async sendTransaction(req, res) {
+    
+    // Importer un wallet existant
+    static async importWallet(req, res) {
         try {
-            const { to, amount, symbol } = req.body;
+            const { seedPhrase } = req.body;
+            
+            if (!bip39.validateMnemonic(seedPhrase)) {
+                return res.status(400).json({ success: false, error: 'Seed phrase invalide' });
+            }
+            
+            const ethWallet = ethers.Wallet.fromPhrase(seedPhrase);
+            const ethAddress = ethWallet.address;
+            
+            const existing = await new Promise((resolve) => {
+                db.get('SELECT * FROM wallets WHERE eth_address = ?', [ethAddress], (err, row) => {
+                    resolve(row);
+                });
+            });
+            
+            if (existing) {
+                return res.status(400).json({ success: false, error: 'Wallet déjà importé' });
+            }
+            
+            const username = `imported_${Date.now()}`;
+            const email = `${username}@betwallet.temp`;
+            const hashedPassword = await bcrypt.hash('temp_' + Date.now(), 10);
+            
+            const userId = await new Promise((resolve, reject) => {
+                db.run(`INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)`,
+                    [username, email, hashedPassword, ethAddress],
+                    function(err) { if (err) reject(err); resolve(this.lastID); });
+            });
+            
+            await new Promise((resolve, reject) => {
+                db.run(`INSERT INTO wallets (user_id, seed_phrase, eth_address) VALUES (?, ?, ?)`,
+                    [userId, seedPhrase, ethAddress], (err) => {
+                    if (err) reject(err); resolve();
+                });
+            });
+            
+            const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET || 'betwallet_secret', { expiresIn: '7d' });
+            
+            res.json({ success: true, token, user: { id: userId, username, email, walletAddress: ethAddress } });
+        } catch (error) {
+            console.error('Erreur import:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+    
+    // Obtenir les soldes
+    static async getBalances(req, res) {
+        try {
             const userId = req.user.id;
-            const user = UserModel.findById(userId);
-            const fromWallet = WalletModel.getWalletByUserId(userId);
             
-            if (!to || !amount || !symbol) {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'Destinataire, montant et symbole requis' 
+            const wallet = await new Promise((resolve) => {
+                db.get('SELECT eth_address FROM wallets WHERE user_id = ?', [userId], (err, row) => {
+                    resolve(row);
                 });
-            }
-            
-            const asset = fromWallet.assets.find(a => a.symbol === symbol);
-            if (!asset || asset.balance < amount) {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'Solde insuffisant' 
-                });
-            }
-            
-            // Mettre à jour le solde
-            asset.balance -= amount;
-            asset.usdValue = asset.balance * (asset.usdValue / (asset.balance + amount));
-            fromWallet.balance -= amount;
-            
-            // Ajouter la transaction
-            const transaction = {
-                type: 'send',
-                amount: amount,
-                symbol: symbol,
-                to: to,
-                status: 'completed',
-                hash: '0x' + Math.random().toString(36).substring(2, 15)
-            };
-            
-            WalletModel.addTransaction(fromWallet.address, transaction);
+            });
             
             res.json({
                 success: true,
-                message: 'Transaction envoyée avec succès',
-                transaction: transaction
+                wallet: wallet,
+                balances: { ethereum: 0.5, bitcoin: 0.02, solana: 5, usdt: 100 }
             });
         } catch (error) {
-            res.status(500).json({ 
-                success: false, 
-                error: 'Erreur lors de l\'envoi' 
-            });
+            res.status(500).json({ success: false, error: error.message });
         }
-        const { sendTransactionEmail } = require('../services/email.service');
-
-// Dans sendTransaction, après la transaction
-await sendTransactionEmail(user.email, {
-    type: 'send',
-    amount: amount,
-    symbol: symbol,
-    txHash: txHash
-});
+    }
+    
+    static async getSeedPhrase(req, res) {
+        try {
+            const userId = req.user.id;
+            const wallet = await new Promise((resolve) => {
+                db.get('SELECT seed_phrase FROM wallets WHERE user_id = ?', [userId], (err, row) => {
+                    resolve(row);
+                });
+            });
+            res.json({ success: true, seedPhrase: wallet?.seed_phrase || '' });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+    
+    static async getAddress(req, res) {
+        try {
+            const { symbol } = req.params;
+            const userId = req.user.id;
+            
+            let addressCol = 'eth_address';
+            if (symbol === 'BTC') addressCol = 'eth_address';
+            if (symbol === 'SOL') addressCol = 'eth_address';
+            
+            const wallet = await new Promise((resolve) => {
+                db.get(`SELECT ${addressCol} as address FROM wallets WHERE user_id = ?`, [userId], (err, row) => {
+                    resolve(row);
+                });
+            });
+            
+            res.json({ success: true, address: wallet?.address || 'Adresse non disponible' });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+    
+    static async sendTransaction(req, res) {
+        res.json({ success: true, message: 'Transaction simulée (mode test)' });
     }
 }
 
-module.exports = new WalletController();
+module.exports = WalletController;
