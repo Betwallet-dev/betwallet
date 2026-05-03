@@ -8,10 +8,19 @@ const sqlite3 = require('sqlite3').verbose();
 
 dotenv.config();
 
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'frontend')));
+
 // Base de données
 const dbPath = path.join(__dirname, 'betwallet.db');
 const db = new sqlite3.Database(dbPath);
 
+// Création des tables
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,17 +43,12 @@ db.serialize(() => {
     console.log('✅ Base de données initialisée');
 });
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend')));
-
 // Middleware Auth
 const authMiddleware = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false, error: 'Non autorisé' });
+    if (!token) {
+        return res.status(401).json({ success: false, error: 'Non autorisé' });
+    }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'betwallet_secret');
         req.user = decoded;
@@ -58,20 +62,24 @@ const authMiddleware = (req, res, next) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'BetWallet API running' });
+    res.json({ status: 'OK', message: 'BetWallet API running', timestamp: new Date().toISOString() });
 });
 
 // Inscription
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        
         if (!username || !email || !password) {
             return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
         }
         
         const existing = await new Promise((resolve) => {
-            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => resolve(row));
+            db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => {
+                resolve(row);
+            });
         });
+        
         if (existing) {
             return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
         }
@@ -82,30 +90,40 @@ app.post('/api/auth/register', async (req, res) => {
         const userId = await new Promise((resolve, reject) => {
             db.run(`INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)`,
                 [username, email, hashedPassword, walletAddress],
-                function(err) { if (err) reject(err); resolve(this.lastID); });
+                function(err) {
+                    if (err) reject(err);
+                    else resolve(this.lastID);
+                });
         });
         
-        // Actifs par défaut
-        const defaultAssets = [
+        const assets = [
             { symbol: 'BTC', balance: 0.05, usdValue: 2850 },
             { symbol: 'ETH', balance: 0.8, usdValue: 2400 },
             { symbol: 'SOL', balance: 10, usdValue: 1400 },
             { symbol: 'USDT', balance: 500, usdValue: 500 }
         ];
         
-        for (const asset of defaultAssets) {
+        for (const asset of assets) {
             await new Promise((resolve, reject) => {
                 db.run(`INSERT INTO assets (user_id, symbol, balance, usd_value) VALUES (?, ?, ?, ?)`,
-                    [userId, asset.symbol, asset.balance, asset.usdValue], (err) => {
-                    if (err) reject(err); resolve();
-                });
+                    [userId, asset.symbol, asset.balance, asset.usdValue],
+                    (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
             });
         }
         
         const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET || 'betwallet_secret', { expiresIn: '7d' });
         
-        res.json({ success: true, token, user: { id: userId, username, email, walletAddress } });
+        res.json({
+            success: true,
+            token,
+            user: { id: userId, username, email, walletAddress }
+        });
+        
     } catch (error) {
+        console.error('Erreur inscription:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
@@ -116,7 +134,9 @@ app.post('/api/auth/login', async (req, res) => {
         const { email, password } = req.body;
         
         const user = await new Promise((resolve) => {
-            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => resolve(row));
+            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+                resolve(row);
+            });
         });
         
         if (!user) {
@@ -130,8 +150,19 @@ app.post('/api/auth/login', async (req, res) => {
         
         const token = jwt.sign({ id: user.id, email }, process.env.JWT_SECRET || 'betwallet_secret', { expiresIn: '7d' });
         
-        res.json({ success: true, token, user: { id: user.id, username: user.username, email: user.email, walletAddress: user.wallet_address } });
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                walletAddress: user.wallet_address
+            }
+        });
+        
     } catch (error) {
+        console.error('Erreur connexion:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
@@ -156,11 +187,12 @@ app.get('/api/wallet/dashboard', authMiddleware, async (req, res) => {
                 assets: assets,
                 chartData: {
                     labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-                    values: [totalBalance * 0.95, totalBalance * 0.97, totalBalance * 0.96, totalBalance * 0.98, totalBalance * 0.99, totalBalance * 0.98, totalBalance]
+                    values: [totalBalance * 0.95, totalBalance * 0.97, totalBalance * 0.96, totalBalance * 0.98, totalBalance * 0.99, totalBalance * 0.98, totalBalance || 1000]
                 }
             }
         });
     } catch (error) {
+        console.error('Erreur dashboard:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
@@ -172,9 +204,10 @@ app.post('/api/wallet/send', authMiddleware, async (req, res) => {
 
 // Frontend
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 BetWallet API sur http://localhost:${PORT}`);
+// Démarrer
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 BetWallet API sur http://0.0.0.0:${PORT}`);
 });
