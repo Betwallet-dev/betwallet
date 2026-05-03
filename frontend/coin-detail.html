@@ -121,7 +121,7 @@
             text-align: center;
             margin-top: 15px;
         }
-        input, select {
+        input {
             width: 100%;
             padding: 12px;
             background: #0a0c1a;
@@ -188,8 +188,6 @@
     <div class="action-buttons">
         <button class="action-btn" onclick="openModal('send')"><i class="fas fa-arrow-up"></i> Envoyer</button>
         <button class="action-btn" onclick="openModal('receive')"><i class="fas fa-arrow-down"></i> Recevoir</button>
-        <button class="action-btn" onclick="openModal('buy')"><i class="fas fa-shopping-cart"></i> Acheter</button>
-        <button class="action-btn" onclick="openModal('sell')"><i class="fas fa-chart-line"></i> Vendre</button>
     </div>
 
     <div id="sendModal" class="modal">
@@ -207,24 +205,6 @@
             <div class="qr-container" id="qrCode"><div style="width:200px;height:200px;background:#eee;margin:0 auto;"></div></div>
             <div class="address-box" id="receiveAddress"></div>
             <button class="btn" onclick="copyAddress()">📋 Copier l'adresse</button>
-        </div>
-    </div>
-
-    <div id="buyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>🛒 Acheter <span id="buySymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('buyModal')">&times;</span></div>
-            <input type="number" id="buyFiatAmount" placeholder="Montant en USD">
-            <input type="text" id="buyCryptoAmount" placeholder="Vous recevrez" readonly style="background:#0a0c1a;">
-            <button class="btn" onclick="buyCrypto()">Confirmer l'achat</button>
-        </div>
-    </div>
-
-    <div id="sellModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>📉 Vendre <span id="sellSymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('sellModal')">&times;</span></div>
-            <input type="number" id="sellAmount" placeholder="Quantité à vendre">
-            <input type="text" id="sellFiatAmount" placeholder="Vous recevrez" readonly style="background:#0a0c1a;">
-            <button class="btn" onclick="sellCrypto()">Confirmer la vente</button>
         </div>
     </div>
 
@@ -312,26 +292,6 @@
                 document.getElementById('qrCode').innerHTML = '';
                 new QRCode(document.getElementById('qrCode'), { text: address, width: 200, height: 200 });
                 document.getElementById('receiveModal').style.display = 'flex';
-            } else if (type === 'buy') {
-                document.getElementById('buySymbolLabel').innerHTML = coinData.symbol;
-                document.getElementById('buyModal').style.display = 'flex';
-                document.getElementById('buyFiatAmount').oninput = function() {
-                    const amount = parseFloat(this.value);
-                    if (!isNaN(amount) && currentPrice > 0) {
-                        document.getElementById('buyCryptoAmount').value = (amount / currentPrice).toFixed(6);
-                    }
-                };
-            } else if (type === 'sell') {
-                document.getElementById('sellSymbolLabel').innerHTML = coinData.symbol;
-                document.getElementById('sellModal').style.display = 'flex';
-                document.getElementById('sellAmount').oninput = function() {
-                    const amount = parseFloat(this.value);
-                    if (!isNaN(amount) && currentPrice > 0 && amount <= coinData.balance) {
-                        document.getElementById('sellFiatAmount').value = `$${(amount * currentPrice).toFixed(2)}`;
-                    } else if (amount > coinData.balance) {
-                        document.getElementById('sellFiatAmount').value = 'Solde insuffisant';
-                    }
-                };
             }
         }
 
@@ -361,21 +321,6 @@
             const address = document.getElementById('receiveAddress').innerHTML;
             navigator.clipboard.writeText(address);
             alert('Adresse copiée !');
-        }
-
-        function buyCrypto() {
-            const fiatAmount = parseFloat(document.getElementById('buyFiatAmount').value);
-            if (!fiatAmount || fiatAmount <= 0) { alert('Montant invalide'); return; }
-            alert(`🔜 Achat de ${(fiatAmount / currentPrice).toFixed(6)} ${coinData.symbol} simulé`);
-            closeModal('buyModal');
-        }
-
-        function sellCrypto() {
-            const cryptoAmount = parseFloat(document.getElementById('sellAmount').value);
-            if (!cryptoAmount || cryptoAmount <= 0) { alert('Montant invalide'); return; }
-            if (cryptoAmount > coinData.balance) { alert('Solde insuffisant'); return; }
-            alert(`🔜 Vente de ${cryptoAmount} ${coinData.symbol} simulée`);
-            closeModal('sellModal');
         }
 
         fetchPriceAndHistory();

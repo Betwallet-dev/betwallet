@@ -34,12 +34,13 @@
         
         .action-buttons {
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
             padding: 0 20px 20px 20px;
             gap: 15px;
         }
         .action-btn {
             flex: 1;
+            max-width: 150px;
             background: #11162b;
             border: none;
             padding: 12px;
@@ -387,7 +388,6 @@
         </div>
 
         <div class="action-buttons">
-            <button class="action-btn" onclick="quickAction('buy')"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
             <button class="action-btn" onclick="quickAction('send')"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
             <button class="action-btn" onclick="quickAction('receive')"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
         </div>
@@ -570,10 +570,10 @@
 
         function getSampleTransactions() {
             return [
-                { type: 'receive', amount: 0.02, symbol: 'BTC', usdValue: 1140, date: '2024-05-01T10:30:00', status: 'completed', from: 'Binance' },
-                { type: 'send', amount: 0.5, symbol: 'ETH', usdValue: 1600, date: '2024-04-28T15:20:00', status: 'completed', to: '0x1234...5678' },
-                { type: 'receive', amount: 100, symbol: 'USDT', usdValue: 100, date: '2024-04-25T09:15:00', status: 'completed', from: 'Coinbase' },
-                { type: 'swap', amount: 2, symbol: 'BNB', usdValue: 1040, date: '2024-04-22T14:45:00', status: 'completed' }
+                { type: 'receive', amount: 0.02, symbol: 'BTC', usdValue: 1140, date: new Date(Date.now() - 2*24*3600000).toISOString(), from: 'Binance' },
+                { type: 'send', amount: 0.5, symbol: 'ETH', usdValue: 1600, date: new Date(Date.now() - 5*24*3600000).toISOString(), to: '0x1234...5678' },
+                { type: 'receive', amount: 100, symbol: 'USDT', usdValue: 100, date: new Date(Date.now() - 8*24*3600000).toISOString(), from: 'Coinbase' },
+                { type: 'swap', amount: 2, symbol: 'BNB', usdValue: 1040, date: new Date(Date.now() - 12*24*3600000).toISOString() }
             ];
         }
 
@@ -679,8 +679,7 @@
         }
 
         function quickAction(action) {
-            if (action === 'buy') alert('🔜 Acheter - Bientôt disponible');
-            else if (action === 'send') alert('🔜 Envoyer - Sélectionnez une crypto dans votre portefeuille');
+            if (action === 'send') alert('🔜 Envoyer - Sélectionnez une crypto dans votre portefeuille');
             else if (action === 'receive') alert('🔜 Recevoir - Sélectionnez une crypto dans votre portefeuille');
         }
 
