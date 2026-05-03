@@ -127,6 +127,7 @@
         .watchlist-price-up { color: #10b981; }
         .watchlist-price-down { color: #ef4444; }
         
+        /* BOTTOM NAVIGATION - Comme sur l'image */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -135,17 +136,65 @@
             background: #11162b;
             display: flex;
             justify-content: space-around;
+            align-items: center;
             padding: 12px 20px;
             border-top: 1px solid rgba(255,255,255,0.08);
         }
         .nav-item {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
             color: #8b8cae;
             font-size: 12px;
             cursor: pointer;
+            transition: all 0.2s;
+            padding: 8px 16px;
+            border-radius: 40px;
         }
-        .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
-        .nav-item.active { color: #f5b042; }
+        .nav-item i { font-size: 22px; }
+        .nav-item span { font-size: 12px; font-weight: 500; }
+        .nav-item.active { color: #f5b042; background: rgba(245,176,66,0.1); }
+        .nav-item:hover { color: #f5b042; background: rgba(245,176,66,0.05); }
+        
+        .profile-container {
+            padding: 20px;
+            display: none;
+        }
+        .profile-container.active {
+            display: block;
+        }
+        .profile-card {
+            background: #11162b;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f5b042, #e08e1a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 20px;
+        }
+        .profile-info {
+            text-align: left;
+            margin-top: 20px;
+        }
+        .profile-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .profile-info-label { color: #8b8cae; }
+        .profile-info-value { font-weight: 500; }
         
         .toast {
             position: fixed;
@@ -163,6 +212,8 @@
             .total-amount { font-size: 36px; }
             .action-btn span { display: none; }
             .action-btn i { font-size: 20px; }
+            .nav-item { padding: 8px 12px; }
+            .nav-item span { font-size: 10px; }
         }
     </style>
 </head>
@@ -172,38 +223,81 @@
         <div class="wallet-icon" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
     </div>
 
-    <div class="balance-section">
-        <div class="total-label">SOLDE TOTAL</div>
-        <div class="total-amount" id="totalBalance">$0.00</div>
-        <div class="total-usd" id="portfolioValue">≈ 0 BTC</div>
+    <!-- Contenu principal (dashboard) -->
+    <div id="mainContent">
+        <div class="balance-section">
+            <div class="total-label">SOLDE TOTAL</div>
+            <div class="total-amount" id="totalBalance">$0.00</div>
+            <div class="total-usd" id="portfolioValue">≈ 0 BTC</div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn" onclick="quickAction('buy')"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
+            <button class="action-btn" onclick="quickAction('send')"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
+            <button class="action-btn" onclick="quickAction('receive')"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
+            <button class="action-btn" onclick="quickAction('swap')"><i class="fas fa-exchange-alt"></i> <span>Swap</span></button>
+        </div>
+
+        <div class="tab-nav">
+            <div class="tab-item active" data-tab="crypto">Crypto</div>
+            <div class="tab-item" data-tab="watchlist">Liste de suivi</div>
+        </div>
+
+        <div class="crypto-list" id="cryptoList">
+            <div style="text-align:center; padding:40px;">Chargement...</div>
+        </div>
+
+        <div class="watchlist-section" id="watchlistSection">
+            <div style="text-align:center; padding:40px;">Chargement des prix...</div>
+        </div>
     </div>
 
-    <div class="action-buttons">
-        <button class="action-btn" onclick="quickAction('buy')"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
-        <button class="action-btn" onclick="quickAction('send')"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
-        <button class="action-btn" onclick="quickAction('receive')"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
-        <button class="action-btn" onclick="quickAction('swap')"><i class="fas fa-exchange-alt"></i> <span>Swap</span></button>
+    <!-- Page Profile -->
+    <div id="profileContent" class="profile-container">
+        <div class="profile-card">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <h3 id="profileUsername">Chargement...</h3>
+            <p id="profileEmail" style="color: #8b8cae; margin-top: 5px;">Chargement...</p>
+            <div class="profile-info">
+                <div class="profile-info-item">
+                    <span class="profile-info-label">📱 Adresse du portefeuille</span>
+                    <span class="profile-info-value" id="profileAddress">Chargement...</span>
+                </div>
+                <div class="profile-info-item">
+                    <span class="profile-info-label">📅 Membre depuis</span>
+                    <span class="profile-info-value" id="profileSince">-</span>
+                </div>
+                <div class="profile-info-item">
+                    <span class="profile-info-label">🔐 Sécurité</span>
+                    <span class="profile-info-value">✅ Authentification</span>
+                </div>
+            </div>
+            <button class="action-btn" onclick="logout()" style="margin-top: 20px; width: 100%;">
+                <i class="fas fa-sign-out-alt"></i> Déconnexion
+            </button>
+        </div>
     </div>
 
-    <div class="tab-nav">
-        <div class="tab-item active" data-tab="crypto">Crypto</div>
-        <div class="tab-item" data-tab="watchlist">Liste de suivi</div>
-    </div>
-
-    <div class="crypto-list" id="cryptoList">
-        <div style="text-align:center; padding:40px;">Chargement...</div>
-    </div>
-
-    <div class="watchlist-section" id="watchlistSection">
-        <div style="text-align:center; padding:40px;">Chargement des prix...</div>
-    </div>
-
+    <!-- BOTTOM NAVIGATION - Accueil, Dépôt, Swap, Profile -->
     <div class="bottom-nav">
-        <div class="nav-item active" data-bottom="portfolio"><i class="fas fa-wallet"></i><span>Portefeuille</span></div>
-        <div class="nav-item" data-bottom="popular"><i class="fas fa-chart-line"></i><span>Populaires</span></div>
-        <div class="nav-item" data-bottom="trade"><i class="fas fa-chart-simple"></i><span>Trade</span></div>
-        <div class="nav-item" data-bottom="rewards"><i class="fas fa-gift"></i><span>Récompenses</span></div>
-        <div class="nav-item" data-bottom="discover"><i class="fas fa-compass"></i><span>Découvrir</span></div>
+        <button class="nav-item active" data-nav="home">
+            <i class="fas fa-home"></i>
+            <span>Accueil</span>
+        </button>
+        <button class="nav-item" data-nav="deposit">
+            <i class="fas fa-arrow-down"></i>
+            <span>Dépôt</span>
+        </button>
+        <button class="nav-item" data-nav="swap">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Swap</span>
+        </button>
+        <button class="nav-item" data-nav="profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </button>
     </div>
 
     <script>
@@ -339,6 +433,17 @@
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
+        function loadProfile() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                document.getElementById('profileUsername').innerHTML = user.username || 'Utilisateur';
+                document.getElementById('profileEmail').innerHTML = user.email || '';
+                document.getElementById('profileAddress').innerHTML = user.walletAddress ? user.walletAddress.substring(0, 16) + '...' : 'Non disponible';
+                document.getElementById('profileSince').innerHTML = new Date().toLocaleDateString();
+            }
+        }
+
+        // Navigation tabs (Crypto / Watchlist)
         document.querySelectorAll('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -355,8 +460,47 @@
             });
         });
 
+        // Bottom navigation (Accueil, Dépôt, Swap, Profile)
+        document.querySelectorAll('.nav-item').forEach(nav => {
+            nav.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                nav.classList.add('active');
+                
+                const mainContent = document.getElementById('mainContent');
+                const profileContent = document.getElementById('profileContent');
+                const page = nav.dataset.nav;
+                
+                if (page === 'home') {
+                    mainContent.style.display = 'block';
+                    profileContent.classList.remove('active');
+                    document.querySelector('.tab-nav').style.display = 'flex';
+                } else if (page === 'profile') {
+                    mainContent.style.display = 'none';
+                    profileContent.classList.add('active');
+                    document.querySelector('.tab-nav').style.display = 'none';
+                    loadProfile();
+                } else if (page === 'deposit') {
+                    alert('💳 Dépôt - Bientôt disponible');
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                    document.querySelector('.nav-item[data-nav="home"]').classList.add('active');
+                    mainContent.style.display = 'block';
+                    profileContent.classList.remove('active');
+                    document.querySelector('.tab-nav').style.display = 'flex';
+                } else if (page === 'swap') {
+                    alert('🔄 Swap - Bientôt disponible');
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                    document.querySelector('.nav-item[data-nav="home"]').classList.add('active');
+                    mainContent.style.display = 'block';
+                    profileContent.classList.remove('active');
+                    document.querySelector('.tab-nav').style.display = 'flex';
+                }
+            });
+        });
+
         document.getElementById('cryptoList').style.display = 'block';
         document.getElementById('watchlistSection').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('profileContent').classList.remove('active');
 
         loadDashboard();
         setInterval(() => { loadDashboard(); }, 30000);
