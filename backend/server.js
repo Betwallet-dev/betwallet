@@ -8,17 +8,17 @@ const bcrypt = require('bcryptjs');
 const sqlite3 = require('sqlite3').verbose();
 const http = require('http');
 const socketIo = require('socket.io');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 dotenv.config();
 
 // ==================== BASE DE DONNÉES ====================
-let db;
-const sqlite3 = require('sqlite3').verbose();
-
 const dbPath = path.join(__dirname, 'betwallet.db');
-db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
+    // Table users
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
@@ -28,14 +28,19 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     
+    // Table wallets (version Trust Wallet)
     db.run(`CREATE TABLE IF NOT EXISTS wallets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER UNIQUE NOT NULL,
-        address TEXT UNIQUE NOT NULL,
-        balance REAL DEFAULT 0,
+        seed_phrase TEXT NOT NULL,
+        eth_address TEXT UNIQUE NOT NULL,
+        btc_address TEXT,
+        sol_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     
+    // Table assets
     db.run(`CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         wallet_id INTEGER NOT NULL,
@@ -45,6 +50,7 @@ db.serialize(() => {
         FOREIGN KEY (wallet_id) REFERENCES wallets(id)
     )`);
     
+    // Table transactions
     db.run(`CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         wallet_id INTEGER NOT NULL,
@@ -61,26 +67,65 @@ db.serialize(() => {
     console.log('✅ Base de données initialisée');
 });
 
-// ==================== IMPORT DES ROUTES ====================
-const priceRoutes = require('./src/routes/price.routes');
-const swapRoutes = require('./src/routes/swap.routes');
-const priceService = require('./src/services/price.service');
+// ==================== IMPORT DES CONTROLLERS ====================
+// Import du controller wallet
+const WalletController = require('./src/controllers/wallet.controller');
 
 // ==================== EXPRESS APP ====================
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+// ==================== SÉCURITÉ ====================
+app.use(helmet({
+    contentSecurityPolicy: false,
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Trop de requêtes, veuillez réessayer plus tard.'
+});
+app.use('/api/', limiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    skipSuccessfulRequests: true
+});
+
+// ==================== MIDDLEWARE ====================
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// ==================== ROUTES API ====================
+// ==================== MIDDLEWARE AUTH ====================
+const authMiddleware = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ success: false, error: 'Non autorisé' });
+    }
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'betwallet_secret_key');
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ success: false, error: 'Token invalide' });
+    }
+};
+
+// ==================== ROUTES PUBLIQUES ====================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API is running', timestamp: new Date().toISOString() });
 });
 
-// Auth routes
+// ==================== ROUTES AUTH ====================
+// Inscription
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -100,35 +145,13 @@ app.post('/api/auth/register', async (req, res) => {
         }
         
         const hashedPassword = await bcrypt.hash(password, 10);
-        const walletAddress = `BetWallet_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const walletAddress = `0x${Math.random().toString(36).substring(2, 15)}${Date.now()}`;
         
         const userId = await new Promise((resolve, reject) => {
             db.run(`INSERT INTO users (username, email, password, wallet_address) VALUES (?, ?, ?, ?)`,
                 [username, email, hashedPassword, walletAddress],
                 function(err) { if (err) reject(err); resolve(this.lastID); });
         });
-        
-        await new Promise((resolve, reject) => {
-            db.run(`INSERT INTO wallets (user_id, address, balance) VALUES (?, ?, ?)`,
-                [userId, walletAddress, 1000], function(err) { if (err) reject(err); resolve(); });
-        });
-        
-        const assets = [
-            { symbol: 'BET', balance: 1000, usdValue: 1000 },
-            { symbol: 'BTC', balance: 0.05, usdValue: 2850 },
-            { symbol: 'ETH', balance: 0.8, usdValue: 2400 },
-            { symbol: 'USDT', balance: 500, usdValue: 500 },
-            { symbol: 'BNB', balance: 2, usdValue: 1000 },
-            { symbol: 'SOL', balance: 10, usdValue: 1500 }
-        ];
-        
-        for (const asset of assets) {
-            await new Promise((resolve, reject) => {
-                db.run(`INSERT INTO assets (wallet_id, symbol, balance, usd_value) VALUES (?, ?, ?, ?)`,
-                    [userId, asset.symbol, asset.balance, asset.usdValue], (err) => {
-                    if (err) reject(err); resolve(); });
-            });
-        }
         
         const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET || 'betwallet_secret_key', { expiresIn: '7d' });
         
@@ -139,6 +162,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+// Connexion
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -168,27 +192,31 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-app.get('/api/wallet/dashboard', async (req, res) => {
+// ==================== ROUTES WALLET (Trust Wallet Style) ====================
+app.post('/api/wallet/create', WalletController.createWallet);
+app.post('/api/wallet/confirm-create', WalletController.confirmCreateWallet);
+app.post('/api/wallet/import', WalletController.importWallet);
+app.get('/api/wallet/balances', authMiddleware, WalletController.getBalances);
+app.get('/api/wallet/seed', authMiddleware, WalletController.getSeedPhrase);
+app.get('/api/wallet/address/:symbol', authMiddleware, WalletController.getAddress);
+app.post('/api/wallet/send', authMiddleware, WalletController.sendTransaction);
+
+// ==================== ROUTES DASHBOARD ====================
+app.get('/api/wallet/dashboard', authMiddleware, async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ success: false, error: 'Non autorisé' });
-        }
+        const userId = req.user.id;
         
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'betwallet_secret_key');
-        const userId = decoded.id;
-        
-        const assets = await new Promise((resolve, reject) => {
-            db.all('SELECT * FROM assets WHERE wallet_id = ?', [userId], (err, rows) => {
+        const wallet = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM wallets WHERE user_id = ?', [userId], (err, row) => {
                 if (err) reject(err);
-                resolve(rows || []);
+                resolve(row);
             });
         });
         
-        const wallet = await new Promise((resolve, reject) => {
-            db.get('SELECT balance FROM wallets WHERE user_id = ?', [userId], (err, row) => {
+        const assets = await new Promise((resolve, reject) => {
+            db.all('SELECT * FROM assets WHERE wallet_id = ?', [wallet?.id || 0], (err, rows) => {
                 if (err) reject(err);
-                resolve(row);
+                resolve(rows || []);
             });
         });
         
@@ -198,12 +226,16 @@ app.get('/api/wallet/dashboard', async (req, res) => {
             success: true,
             dashboard: {
                 totalBalance: totalBalance,
-                betBalance: wallet?.balance || 0,
-                assets: assets.map(a => ({ symbol: a.symbol, name: a.symbol, balance: a.balance, usdValue: a.usd_value, icon: '💰' })),
+                betBalance: 0,
+                assets: assets.length > 0 ? assets : [
+                    { symbol: 'ETH', name: 'Ethereum', balance: 0.5, usdValue: 1600, icon: '💎' },
+                    { symbol: 'BTC', name: 'Bitcoin', balance: 0.02, usdValue: 1140, icon: '₿' },
+                    { symbol: 'SOL', name: 'Solana', balance: 5, usdValue: 700, icon: '◎' }
+                ],
                 recentTransactions: [],
                 chartData: {
                     labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-                    values: [totalBalance * 0.95, totalBalance * 0.97, totalBalance * 0.96, totalBalance * 0.98, totalBalance * 0.99, totalBalance * 0.98, totalBalance]
+                    values: [1000, 1200, 1150, 1300, 1450, 1400, 1500]
                 }
             }
         });
@@ -213,24 +245,29 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     }
 });
 
-// ==================== NOUVELLES ROUTES ====================
-app.use('/api/prices', priceRoutes);
-app.use('/api/swap', swapRoutes);
-
 // ==================== FRONTEND ====================
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
-// ==================== WEBSOCKET ====================
+app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend', 'dashboard.html'));
+});
+
+// ==================== WEBSOCKET (Prix temps réel) ====================
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 
 io.on('connection', (socket) => {
     console.log('🔌 Client WebSocket connecté');
     
-    const interval = setInterval(async () => {
-        const prices = await priceService.getPrices();
+    const interval = setInterval(() => {
+        const prices = {
+            BTC: { usd: 57000 + (Math.random() - 0.5) * 1000, change24h: (Math.random() - 0.5) * 5 },
+            ETH: { usd: 3200 + (Math.random() - 0.5) * 50, change24h: (Math.random() - 0.5) * 5 },
+            SOL: { usd: 140 + (Math.random() - 0.5) * 5, change24h: (Math.random() - 0.5) * 5 },
+            USDT: { usd: 1, change24h: 0 }
+        };
         socket.emit('price-update', { prices: prices, timestamp: new Date().toISOString() });
     }, 5000);
     
@@ -242,6 +279,9 @@ io.on('connection', (socket) => {
 
 // ==================== DÉMARRAGE ====================
 server.listen(PORT, () => {
-    console.log(`🚀 BetWallet API démarrée sur http://localhost:${PORT}`);
+    console.log(`\n🚀 BetWallet API démarrée sur http://localhost:${PORT}`);
     console.log(`📡 WebSocket actif sur ws://localhost:${PORT}`);
+    console.log(`🌐 Frontend: http://localhost:${PORT}\n`);
 });
+
+module.exports = app;
