@@ -6,6 +6,7 @@
     <title>BetWallet - Portefeuille</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -127,38 +128,116 @@
         .watchlist-price-up { color: #10b981; }
         .watchlist-price-down { color: #ef4444; }
         
-        /* BOTTOM NAVIGATION - Comme sur l'image */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #11162b;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 20px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+        /* Page Dépôt */
+        .deposit-container {
+            padding: 20px;
+            display: none;
         }
-        .nav-item {
+        .deposit-container.active {
+            display: block;
+        }
+        .deposit-card {
+            background: linear-gradient(135deg, #11162b, #0a0e1c);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .deposit-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(245,176,66,0.3);
+        }
+        .deposit-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .deposit-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .deposit-card p {
+            color: #8b8cae;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .deposit-continue {
+            margin-top: 30px;
+            display: inline-block;
+            background: rgba(245,176,66,0.2);
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+        }
+        
+        /* Page Sélection Crypto */
+        .select-crypto-container {
+            padding: 20px;
+            display: none;
+        }
+        .select-crypto-container.active {
+            display: block;
+        }
+        .search-box {
+            background: #11162b;
+            border-radius: 40px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .search-box i { color: #8b8cae; }
+        .search-box input {
             background: transparent;
             border: none;
-            color: #8b8cae;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 8px 16px;
-            border-radius: 40px;
+            color: white;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
         }
-        .nav-item i { font-size: 22px; }
-        .nav-item span { font-size: 12px; font-weight: 500; }
-        .nav-item.active { color: #f5b042; background: rgba(245,176,66,0.1); }
-        .nav-item:hover { color: #f5b042; background: rgba(245,176,66,0.05); }
+        .section-title {
+            color: #8b8cae;
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+        }
+        .crypto-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .crypto-option:hover {
+            background: rgba(245,176,66,0.05);
+            margin: 0 -10px;
+            padding: 12px 10px;
+            border-radius: 12px;
+        }
+        .crypto-option-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .crypto-option-icon { font-size: 28px; }
+        .crypto-option-info h4 { font-size: 16px; }
+        .crypto-option-info p { font-size: 12px; color: #8b8cae; }
+        .back-btn-deposit {
+            background: rgba(245,176,66,0.15);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
         
+        /* Profile Page */
         .profile-container {
             padding: 20px;
             display: none;
@@ -194,7 +273,39 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .profile-info-label { color: #8b8cae; }
-        .profile-info-value { font-weight: 500; }
+        .profile-info-value { font-weight: 500; word-break: break-all; max-width: 60%; text-align: right; }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #11162b;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            color: #8b8cae;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 8px 16px;
+            border-radius: 40px;
+        }
+        .nav-item i { font-size: 22px; }
+        .nav-item span { font-size: 12px; font-weight: 500; }
+        .nav-item.active { color: #f5b042; background: rgba(245,176,66,0.1); }
+        .nav-item:hover { color: #f5b042; background: rgba(245,176,66,0.05); }
         
         .toast {
             position: fixed;
@@ -223,7 +334,7 @@
         <div class="wallet-icon" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
     </div>
 
-    <!-- Contenu principal (dashboard) -->
+    <!-- Page Principale (Accueil) -->
     <div id="mainContent">
         <div class="balance-section">
             <div class="total-label">SOLDE TOTAL</div>
@@ -255,9 +366,7 @@
     <!-- Page Profile -->
     <div id="profileContent" class="profile-container">
         <div class="profile-card">
-            <div class="profile-avatar">
-                <i class="fas fa-user"></i>
-            </div>
+            <div class="profile-avatar"><i class="fas fa-user"></i></div>
             <h3 id="profileUsername">Chargement...</h3>
             <p id="profileEmail" style="color: #8b8cae; margin-top: 5px;">Chargement...</p>
             <div class="profile-info">
@@ -280,24 +389,35 @@
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION - Accueil, Dépôt, Swap, Profile -->
+    <!-- Page Dépôt -->
+    <div id="depositPage" class="deposit-container">
+        <div class="deposit-card" onclick="showSelectCryptoPage()">
+            <div class="deposit-icon"><i class="fas fa-arrow-down" style="font-size: 48px; color: #f5b042;"></i></div>
+            <h3>Dépôt de cryptos</h3>
+            <p>Déposez des cryptomonnaies depuis d'autres plateformes d'échange/portefeuilles sur BetWallet</p>
+            <div class="deposit-continue">Cliquez pour continuer →</div>
+        </div>
+    </div>
+
+    <!-- Page Sélection Crypto -->
+    <div id="selectCryptoPage" class="select-crypto-container">
+        <div class="back-btn-deposit" onclick="backToDeposit()"><i class="fas fa-arrow-left"></i></div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="cryptoSearch" placeholder="Chercher une crypto" onkeyup="filterCrypto()">
+        </div>
+        <div class="section-title">Historique</div>
+        <div id="historyList"></div>
+        <div class="section-title">Populaires</div>
+        <div id="popularList"></div>
+    </div>
+
+    <!-- Bottom Navigation -->
     <div class="bottom-nav">
-        <button class="nav-item active" data-nav="home">
-            <i class="fas fa-home"></i>
-            <span>Accueil</span>
-        </button>
-        <button class="nav-item" data-nav="deposit">
-            <i class="fas fa-arrow-down"></i>
-            <span>Dépôt</span>
-        </button>
-        <button class="nav-item" data-nav="swap">
-            <i class="fas fa-exchange-alt"></i>
-            <span>Swap</span>
-        </button>
-        <button class="nav-item" data-nav="profile">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </button>
+        <button class="nav-item active" data-nav="home"><i class="fas fa-home"></i><span>Accueil</span></button>
+        <button class="nav-item" data-nav="deposit"><i class="fas fa-arrow-down"></i><span>Dépôt</span></button>
+        <button class="nav-item" data-nav="swap"><i class="fas fa-exchange-alt"></i><span>Swap</span></button>
+        <button class="nav-item" data-nav="profile"><i class="fas fa-user"></i><span>Profile</span></button>
     </div>
 
     <script>
@@ -315,6 +435,21 @@
             { symbol: 'SOL', name: 'Solana', network: 'Solana', icon: '◎' },
             { symbol: 'USDT', name: 'Tether', network: 'BNB Smart Chain (BSC)', icon: '💵' },
             { symbol: 'USDT', name: 'Tether', network: 'Tron (TRC-20)', icon: '💵' }
+        ];
+
+        const popularCoins = [
+            { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
+            { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ' },
+            { symbol: 'USDT', name: 'TetherUS', icon: '💵' },
+            { symbol: 'BNB', name: 'BNB', icon: '🔶' }
+        ];
+
+        const historyCoins = [
+            { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
+            { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ' },
+            { symbol: 'BNB', name: 'BNB', icon: '🔶' },
+            { symbol: 'EURI', name: 'EURI', icon: '💶' },
+            { symbol: 'USDT', name: 'TetherUS', icon: '💵' }
         ];
 
         async function fetchMarketPrices() {
@@ -415,7 +550,7 @@
         }
 
         function getIcon(symbol) {
-            const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+            const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵', EURI: '💶' };
             return icons[symbol] || '💰';
         }
 
@@ -443,7 +578,73 @@
             }
         }
 
-        // Navigation tabs (Crypto / Watchlist)
+        // === FONCTIONS DÉPÔT ===
+        function showDepositPage() {
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('profileContent').classList.remove('active');
+            document.getElementById('depositPage').classList.add('active');
+            document.getElementById('selectCryptoPage').classList.remove('active');
+            document.querySelector('.tab-nav').style.display = 'none';
+        }
+
+        function showSelectCryptoPage() {
+            document.getElementById('depositPage').classList.remove('active');
+            document.getElementById('selectCryptoPage').classList.add('active');
+            renderCryptoSelection();
+        }
+
+        function backToDeposit() {
+            document.getElementById('selectCryptoPage').classList.remove('active');
+            document.getElementById('depositPage').classList.add('active');
+        }
+
+        function renderCryptoSelection() {
+            const historyContainer = document.getElementById('historyList');
+            const popularContainer = document.getElementById('popularList');
+            
+            historyContainer.innerHTML = historyCoins.map(coin => `
+                <div class="crypto-option" onclick="selectCryptoForDeposit('${coin.symbol}', '${coin.name}')">
+                    <div class="crypto-option-left">
+                        <div class="crypto-option-icon">${coin.icon}</div>
+                        <div class="crypto-option-info">
+                            <h4>${coin.symbol}</h4>
+                            <p>${coin.name}</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #8b8cae;"></i>
+                </div>
+            `).join('');
+            
+            popularContainer.innerHTML = popularCoins.map(coin => `
+                <div class="crypto-option" onclick="selectCryptoForDeposit('${coin.symbol}', '${coin.name}')">
+                    <div class="crypto-option-left">
+                        <div class="crypto-option-icon">${coin.icon}</div>
+                        <div class="crypto-option-info">
+                            <h4>${coin.symbol}</h4>
+                            <p>${coin.name}</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #8b8cae;"></i>
+                </div>
+            `).join('');
+        }
+
+        function selectCryptoForDeposit(symbol, name) {
+            const address = `0x${Math.random().toString(36).substring(2, 15)}${Date.now()}`;
+            alert(`💰 DÉPÔT ${name} (${symbol})\n\nAdresse de dépôt:\n${address}\n\n⚠️ Envoyez UNIQUEMENT des ${symbol} sur cette adresse.\n\nLe dépôt sera crédité après 3 confirmations.`);
+        }
+
+        function filterCrypto() {
+            const searchTerm = document.getElementById('cryptoSearch').value.toLowerCase();
+            const allHistory = document.querySelectorAll('#historyList .crypto-option');
+            const allPopular = document.querySelectorAll('#popularList .crypto-option');
+            [...allHistory, ...allPopular].forEach(option => {
+                const text = option.textContent.toLowerCase();
+                option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            });
+        }
+
+        // === NAVIGATION TABS (Crypto / Watchlist) ===
         document.querySelectorAll('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -460,7 +661,7 @@
             });
         });
 
-        // Bottom navigation (Accueil, Dépôt, Swap, Profile)
+        // === BOTTOM NAVIGATION ===
         document.querySelectorAll('.nav-item').forEach(nav => {
             nav.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -468,35 +669,43 @@
                 
                 const mainContent = document.getElementById('mainContent');
                 const profileContent = document.getElementById('profileContent');
+                const depositPage = document.getElementById('depositPage');
+                const selectCryptoPage = document.getElementById('selectCryptoPage');
                 const page = nav.dataset.nav;
                 
                 if (page === 'home') {
                     mainContent.style.display = 'block';
                     profileContent.classList.remove('active');
+                    depositPage.classList.remove('active');
+                    selectCryptoPage.classList.remove('active');
                     document.querySelector('.tab-nav').style.display = 'flex';
                 } else if (page === 'profile') {
                     mainContent.style.display = 'none';
                     profileContent.classList.add('active');
+                    depositPage.classList.remove('active');
+                    selectCryptoPage.classList.remove('active');
                     document.querySelector('.tab-nav').style.display = 'none';
                     loadProfile();
                 } else if (page === 'deposit') {
-                    alert('💳 Dépôt - Bientôt disponible');
-                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                    document.querySelector('.nav-item[data-nav="home"]').classList.add('active');
-                    mainContent.style.display = 'block';
+                    mainContent.style.display = 'none';
                     profileContent.classList.remove('active');
-                    document.querySelector('.tab-nav').style.display = 'flex';
+                    depositPage.classList.add('active');
+                    selectCryptoPage.classList.remove('active');
+                    document.querySelector('.tab-nav').style.display = 'none';
                 } else if (page === 'swap') {
                     alert('🔄 Swap - Bientôt disponible');
                     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                     document.querySelector('.nav-item[data-nav="home"]').classList.add('active');
                     mainContent.style.display = 'block';
                     profileContent.classList.remove('active');
+                    depositPage.classList.remove('active');
+                    selectCryptoPage.classList.remove('active');
                     document.querySelector('.tab-nav').style.display = 'flex';
                 }
             });
         });
 
+        // Initialisation
         document.getElementById('cryptoList').style.display = 'block';
         document.getElementById('watchlistSection').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';

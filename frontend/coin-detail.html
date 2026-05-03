@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -339,8 +340,8 @@
         async function sendTransaction() {
             const to = document.getElementById('sendAddress').value;
             const amount = parseFloat(document.getElementById('sendAmount').value);
-            if (!to || !amount) { showToast('Remplissez tous les champs'); return; }
-            if (amount > coinData.balance) { showToast('Solde insuffisant'); return; }
+            if (!to || !amount) { alert('Remplissez tous les champs'); return; }
+            if (amount > coinData.balance) { alert('Solde insuffisant'); return; }
             try {
                 const res = await fetch(`${API_URL}/wallet/send`, {
                     method: 'POST',
@@ -349,45 +350,36 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('Transaction envoyée !');
+                    alert('Transaction envoyée !');
                     closeModal('sendModal');
                     setTimeout(() => window.location.reload(), 1500);
-                } else showToast('Erreur');
-            } catch(e) { showToast('Erreur réseau'); }
+                } else alert('Erreur');
+            } catch(e) { alert('Erreur réseau'); }
         }
 
         function copyAddress() {
             const address = document.getElementById('receiveAddress').innerHTML;
             navigator.clipboard.writeText(address);
-            showToast('Adresse copiée !');
+            alert('Adresse copiée !');
         }
 
         function buyCrypto() {
             const fiatAmount = parseFloat(document.getElementById('buyFiatAmount').value);
-            if (!fiatAmount || fiatAmount <= 0) { showToast('Montant invalide'); return; }
-            showToast(`🔜 Achat de ${(fiatAmount / currentPrice).toFixed(6)} ${coinData.symbol} simulé`);
+            if (!fiatAmount || fiatAmount <= 0) { alert('Montant invalide'); return; }
+            alert(`🔜 Achat de ${(fiatAmount / currentPrice).toFixed(6)} ${coinData.symbol} simulé`);
             closeModal('buyModal');
         }
 
         function sellCrypto() {
             const cryptoAmount = parseFloat(document.getElementById('sellAmount').value);
-            if (!cryptoAmount || cryptoAmount <= 0) { showToast('Montant invalide'); return; }
-            if (cryptoAmount > coinData.balance) { showToast('Solde insuffisant'); return; }
-            showToast(`🔜 Vente de ${cryptoAmount} ${coinData.symbol} simulée`);
+            if (!cryptoAmount || cryptoAmount <= 0) { alert('Montant invalide'); return; }
+            if (cryptoAmount > coinData.balance) { alert('Solde insuffisant'); return; }
+            alert(`🔜 Vente de ${cryptoAmount} ${coinData.symbol} simulée`);
             closeModal('sellModal');
-        }
-
-        function showToast(msg) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
         }
 
         fetchPriceAndHistory();
         setInterval(fetchPriceAndHistory, 30000);
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>
