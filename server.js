@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +31,7 @@ async function connectDB() {
     }
 }
 
-// ==================== PRIX TEMPS RÉEL ====================
+// ==================== PRIX TEMPS RÉEL (CORRIGÉ) ====================
 const CRYPTO_IDS = {
     'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binancecoin', 'SOL': 'solana',
     'USDT': 'tether', 'XRP': 'ripple', 'ADA': 'cardano', 'DOGE': 'dogecoin',
@@ -47,14 +47,28 @@ async function getAllPrices() {
     try {
         const ids = Object.values(CRYPTO_IDS).join(',');
         const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+        
+        // Vérifier si la réponse est OK
+        if (!response.ok) {
+            console.warn(`⚠️ API CoinGecko: ${response.status}`);
+            return DEFAULT_PRICES;
+        }
+        
         const data = await response.json();
+        
+        // Vérifier que data est bien un objet
+        if (!data || typeof data !== 'object') {
+            console.warn('⚠️ API CoinGecko: réponse invalide');
+            return DEFAULT_PRICES;
+        }
+        
         const prices = {};
         for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
             prices[symbol] = data[id]?.usd || DEFAULT_PRICES[symbol];
         }
         return prices;
     } catch (error) {
-        console.error('Erreur API prix:', error);
+        console.error('❌ Erreur API CoinGecko:', error.message);
         return DEFAULT_PRICES;
     }
 }
@@ -63,9 +77,15 @@ async function getPrice(symbol) {
     try {
         const id = CRYPTO_IDS[symbol];
         const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+        
+        if (!response.ok) {
+            return DEFAULT_PRICES[symbol] || 0;
+        }
+        
         const data = await response.json();
         return data[id]?.usd || DEFAULT_PRICES[symbol] || 0;
     } catch (error) {
+        console.error(`Erreur prix ${symbol}:`, error.message);
         return DEFAULT_PRICES[symbol] || 0;
     }
 }
@@ -187,6 +207,7 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Erreur connexion:', error);
         res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
 });
