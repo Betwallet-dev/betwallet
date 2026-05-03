@@ -1,8 +1,6 @@
 const API_URL = 'https://supportblockchain.finance/api';
 console.log('🔗 API URL:', API_URL);
 
-// Le reste de votre code auth.js...
-
 function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
@@ -15,6 +13,43 @@ function switchTab(tab) {
         document.getElementById('registerForm').classList.add('active');
     }
 }
+
+// Gestion de la connexion
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+
+    try {
+        console.log('Tentative de connexion à:', `${API_URL}/auth/login`);
+        
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        console.log('Réponse:', data);
+        
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            window.location.href = 'dashboard.html';
+        } else {
+            alert(data.error || 'Erreur de connexion');
+        }
+    } catch (error) {
+        console.error('Erreur détaillée:', error);
+        alert(`Erreur de connexion au serveur: ${error.message}`);
+    }
+});
 
 // Gestion de l'inscription
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -41,7 +76,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     }
 
     try {
-        console.log('Inscription en cours...');
+        console.log('Tentative d\'inscription à:', `${API_URL}/auth/register`);
         
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
@@ -60,44 +95,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
             alert(data.error || 'Erreur d\'inscription');
         }
     } catch (error) {
-        console.error('Erreur:', error);
-        alert('Erreur de connexion au serveur. Vérifiez que l\'API est accessible.');
-    }
-});
-
-// Gestion de la connexion
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) {
-        alert('Veuillez remplir tous les champs');
-        return;
-    }
-
-    try {
-        console.log('Connexion en cours...');
-        
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        
-        const data = await response.json();
-        console.log('Réponse:', data);
-        
-        if (data.success) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            window.location.href = 'dashboard.html';
-        } else {
-            alert(data.error || 'Erreur de connexion');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        alert('Erreur de connexion au serveur. Vérifiez que l\'API est accessible.');
+        console.error('Erreur détaillée:', error);
+        alert(`Erreur de connexion au serveur: ${error.message}\n\nVérifiez que le backend tourne sur ${API_URL}`);
     }
 });

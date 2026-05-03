@@ -1,6 +1,8 @@
 let currentRate = null;
 
 async function getSwapRate(from, to, amount) {
+    if (!amount || amount <= 0) return;
+    
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/swap/rate?from=${from}&to=${to}&amount=${amount}`, {
@@ -12,9 +14,9 @@ async function getSwapRate(from, to, amount) {
             const estimateDiv = document.getElementById('swapEstimate');
             if (estimateDiv) {
                 estimateDiv.innerHTML = `
-                    <div>Vous recevez: ${data.toAmount.toFixed(8)} ${to}</div>
-                    <div>Taux: 1 ${from} = ${data.rate} ${to}</div>
-                    <div>Frais: ${data.fee.toFixed(8)} ${to}</div>
+                    <div>💱 Vous recevez: <strong>${data.toAmount.toFixed(8)} ${to}</strong></div>
+                    <div>📊 Taux: 1 ${from} = ${data.rate} ${to}</div>
+                    <div>💸 Frais: ${data.fee.toFixed(8)} ${to}</div>
                 `;
             }
         }
@@ -25,6 +27,11 @@ async function getSwapRate(from, to, amount) {
 }
 
 async function executeSwap(from, to, amount) {
+    if (!amount || amount <= 0) {
+        alert('Entrez un montant valide');
+        return;
+    }
+    
     try {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'));
@@ -35,18 +42,20 @@ async function executeSwap(from, to, amount) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ from, to, amount, userId: user.id })
+            body: JSON.stringify({ from, to, amount: parseFloat(amount), userId: user.id })
         });
         
         const data = await response.json();
         if (data.success) {
-            alert('Swap effectué avec succès!');
+            alert(`✅ Swap effectué avec succès!\n\n${amount} ${from} → ${data.toAmount.toFixed(8)} ${to}`);
+            closeSwapModal();
             setTimeout(() => location.reload(), 1500);
+        } else {
+            alert('Erreur lors du swap: ' + (data.error || 'solde insuffisant'));
         }
-        return data;
     } catch (error) {
         console.error('Erreur swap:', error);
-        alert('Erreur lors du swap');
+        alert('Erreur réseau lors du swap');
     }
 }
 
@@ -60,9 +69,8 @@ function closeSwapModal() {
     if (modal) modal.style.display = 'none';
 }
 
-function createSwapModal() {
-    if (document.getElementById('swapModal')) return;
-    
+// Créer le modal s'il n'existe pas
+if (!document.getElementById('swapModal')) {
     const modalHTML = `
         <div id="swapModal" class="modal" style="display:none">
             <div class="modal-content">
@@ -86,7 +94,7 @@ function createSwapModal() {
                         document.getElementById('swapFrom').value,
                         document.getElementById('swapTo').value,
                         document.getElementById('swapAmount').value
-                    )">Calculer</button>
+                    )">📊 Calculer</button>
                     <div class="swap-arrow">⬇️</div>
                     <div class="input-group">
                         <label>Vers</label>
@@ -102,7 +110,7 @@ function createSwapModal() {
                         document.getElementById('swapFrom').value,
                         document.getElementById('swapTo').value,
                         document.getElementById('swapAmount').value
-                    )">Confirmer l'échange</button>
+                    )">✅ Confirmer l'échange</button>
                 </div>
             </div>
         </div>
@@ -110,6 +118,7 @@ function createSwapModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
+// Ajouter le bouton swap
 function addSwapButton() {
     const actions = document.querySelector('.actions');
     if (actions && !document.getElementById('swapBtn')) {
@@ -122,7 +131,4 @@ function addSwapButton() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    createSwapModal();
-    addSwapButton();
-});
+document.addEventListener('DOMContentLoaded', addSwapButton);
