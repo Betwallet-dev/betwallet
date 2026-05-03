@@ -13,22 +13,43 @@ app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ==================== STOCKAGE PERSISTANT ====================
 const DATA_FILE = path.join(__dirname, 'users.json');
-let users = [];
-let nextId = 1;
 
-if (fs.existsSync(DATA_FILE)) {
+// Fonction pour charger les utilisateurs depuis le fichier
+function loadUsers() {
     try {
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        const saved = JSON.parse(data);
-        users = saved.users || [];
-        nextId = saved.nextId || users.length + 1;
-        console.log(`✅ ${users.length} utilisateurs chargés`);
-    } catch(e) { console.error('Erreur chargement:', e); }
+        if (fs.existsSync(DATA_FILE)) {
+            const data = fs.readFileSync(DATA_FILE, 'utf8');
+            const saved = JSON.parse(data);
+            console.log(`✅ ${saved.users?.length || 0} utilisateurs chargés`);
+            return {
+                users: saved.users || [],
+                nextId: saved.nextId || 1
+            };
+        }
+    } catch (e) {
+        console.error('Erreur chargement:', e);
+    }
+    return { users: [], nextId: 1 };
 }
 
-function saveUsers() {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ users, nextId }, null, 2));
-    console.log(`💾 ${users.length} utilisateurs sauvegardés`);
+// Fonction pour sauvegarder les utilisateurs
+function saveUsers(usersData, nextIdData) {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify({ users: usersData, nextId: nextIdData }, null, 2));
+        console.log(`💾 ${usersData.length} utilisateurs sauvegardés`);
+        return true;
+    } catch (e) {
+        console.error('Erreur sauvegarde:', e);
+        return false;
+    }
+}
+
+// Chargement initial
+let { users, nextId } = loadUsers();
+
+// Fonction helper pour sauvegarder l'état actuel
+function persistUsers() {
+    saveUsers(users, nextId);
 }
 
 // ==================== PRIX TEMPS RÉEL ====================
@@ -106,18 +127,6 @@ const CRYPTO_ICONS = {
     'USDT': '💵'
 };
 
-// Mettre à jour les valeurs USD d'un utilisateur avec les prix actuels
-async function updateUserUSDValues(user) {
-    const prices = await getAllPrices();
-    for (const asset of user.assets) {
-        const price = prices[asset.symbol];
-        if (price) {
-            asset.usdValue = asset.balance * price;
-        }
-    }
-    return prices;
-}
-
 // ==================== ROUTES ====================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API running' });
@@ -131,11 +140,14 @@ app.post('/api/auth/register', (req, res) => {
         return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
     }
     
-    if (users.find(u => u.email === email)) {
+    // Recharger les utilisateurs pour éviter les conflits
+    const { users: freshUsers, nextId: freshNextId } = loadUsers();
+    
+    if (freshUsers.find(u => u.email === email)) {
         return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
     }
     
-    const userId = nextId++;
+    const userId = freshNextId;
     const walletAddress = generateWalletAddress();
     
     const assets = cryptoSymbols.map(symbol => ({
@@ -146,7 +158,7 @@ app.post('/api/auth/register', (req, res) => {
         address: `${symbol.toLowerCase()}_${crypto.randomBytes(16).toString('hex')}`
     }));
     
-    users.push({
+    const newUser = {
         id: userId,
         username,
         email,
@@ -155,9 +167,14 @@ app.post('/api/auth/register', (req, res) => {
         assets: assets,
         transactions: [],
         created_at: new Date().toISOString()
-    });
+    };
     
-    saveUsers();
+    freshUsers.push(newUser);
+    saveUsers(freshUsers, freshNextId + 1);
+    
+    // Mettre à jour la variable globale
+    users = freshUsers;
+    nextId = freshNextId + 1;
     
     const token = `token_${userId}_${Date.now()}`;
     
@@ -171,10 +188,15 @@ app.post('/api/auth/register', (req, res) => {
 // Connexion
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    const user = users.find(u => u.email === email && u.password === password);
+    
+    // Recharger les utilisateurs pour avoir les dernières données
+    const { users: freshUsers } = loadUsers();
+    
+    const user = freshUsers.find(u => u.email === email && u.password === password);
     if (!user) {
         return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
     }
+    
     const token = `token_${user.id}_${Date.now()}`;
     res.json({
         success: true,
@@ -191,7 +213,8 @@ app.post('/api/auth/login', (req, res) => {
 // Mot de passe oublié
 app.post('/api/auth/forgot-password', (req, res) => {
     const { email } = req.body;
-    const user = users.find(u => u.email === email);
+    const { users: freshUsers } = loadUsers();
+    const user = freshUsers.find(u => u.email === email);
     if (!user) {
         return res.json({ success: true, message: 'Si cet email existe, vous recevrez un lien.' });
     }
@@ -215,7 +238,11 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    const user = users.find(u => u.id === userId);
+    
+    // Recharger les utilisateurs pour avoir les dernières données
+    const { users: freshUsers } = loadUsers();
+    const user = freshUsers.find(u => u.id === userId);
+    
     if (!user) {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
@@ -229,9 +256,6 @@ app.get('/api/wallet/dashboard', async (req, res) => {
         const usdValue = asset.balance * currentPrice;
         totalBalance += usdValue;
         
-        // Mettre à jour la valeur USD stockée
-        asset.usdValue = usdValue;
-        
         return {
             symbol: asset.symbol,
             name: getCryptoName(asset.symbol),
@@ -242,8 +266,6 @@ app.get('/api/wallet/dashboard', async (req, res) => {
             address: asset.address
         };
     });
-    
-    saveUsers();
     
     res.json({
         success: true,
@@ -265,12 +287,18 @@ app.post('/api/wallet/send', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    const user = users.find(u => u.id === userId);
-    if (!user) {
+    
+    // Recharger les utilisateurs
+    let { users: freshUsers, nextId: freshNextId } = loadUsers();
+    const userIndex = freshUsers.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
+    const user = freshUsers[userIndex];
     const asset = user.assets.find(a => a.symbol === symbol);
+    
     if (!asset || asset.balance < amount) {
         return res.status(400).json({ success: false, error: 'Solde insuffisant' });
     }
@@ -279,7 +307,6 @@ app.post('/api/wallet/send', async (req, res) => {
     const usdValue = amount * price;
     
     asset.balance -= amount;
-    asset.usdValue = asset.balance * price;
     
     user.transactions.unshift({
         type: 'send',
@@ -292,14 +319,15 @@ app.post('/api/wallet/send', async (req, res) => {
         status: 'completed'
     });
     
-    saveUsers();
+    // Sauvegarder
+    saveUsers(freshUsers, freshNextId);
+    users = freshUsers;
     
     res.json({
         success: true,
         message: `${amount} ${symbol} envoyé à ${to}`,
         usdValue: usdValue,
-        priceAtTime: price,
-        txHash: `0x${crypto.randomBytes(16).toString('hex')}`
+        priceAtTime: price
     });
 });
 
@@ -329,9 +357,11 @@ app.get('/api/admin/users', async (req, res) => {
         return res.status(401).json({ success: false });
     }
     
+    // Recharger les utilisateurs depuis le fichier
+    const { users: freshUsers } = loadUsers();
     const prices = await getAllPrices();
     
-    const usersWithValues = users.map(u => {
+    const usersWithValues = freshUsers.map(u => {
         let totalValue = 0;
         const assetsWithValue = u.assets.map(asset => {
             const price = prices[asset.symbol] || DEFAULT_PRICES[asset.symbol] || 0;
@@ -362,7 +392,7 @@ app.get('/api/admin/users', async (req, res) => {
     res.json({ success: true, users: usersWithValues });
 });
 
-// Envoyer des cryptos à un utilisateur (admin) - AVEC PRIX RÉEL AU MOMENT DE L'ENVOI
+// Envoyer des cryptos à un utilisateur (admin)
 app.post('/api/admin/send-crypto', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
@@ -375,25 +405,26 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Données invalides' });
     }
     
-    const user = users.find(u => u.id === userId);
-    if (!user) {
+    // Recharger les utilisateurs
+    let { users: freshUsers, nextId: freshNextId } = loadUsers();
+    const userIndex = freshUsers.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
+    const user = freshUsers[userIndex];
     const asset = user.assets.find(a => a.symbol === symbol);
+    
     if (!asset) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
-    // PRIX RÉEL AU MOMENT DE L'ENVOI
     const priceAtTime = await getPrice(symbol);
     const usdValueAdded = amount * priceAtTime;
     
-    // Ajouter le montant
     asset.balance += amount;
-    asset.usdValue = asset.balance * priceAtTime;
     
-    // Ajouter la transaction avec le prix au moment de l'envoi
     user.transactions.unshift({
         type: 'receive',
         symbol: symbol,
@@ -405,7 +436,9 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         status: 'completed'
     });
     
-    saveUsers();
+    // Sauvegarder
+    saveUsers(freshUsers, freshNextId);
+    users = freshUsers;
     
     res.json({
         success: true,
@@ -413,7 +446,7 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         priceAtTime: priceAtTime,
         usdValue: usdValueAdded,
         newBalance: asset.balance,
-        newUsdValue: asset.usdValue
+        newUsdValue: asset.balance * priceAtTime
     });
 });
 
@@ -430,12 +463,17 @@ app.post('/api/admin/update-balance', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Données invalides' });
     }
     
-    const user = users.find(u => u.id === userId);
-    if (!user) {
+    // Recharger les utilisateurs
+    let { users: freshUsers, nextId: freshNextId } = loadUsers();
+    const userIndex = freshUsers.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
+    const user = freshUsers[userIndex];
     const asset = user.assets.find(a => a.symbol === symbol);
+    
     if (!asset) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
@@ -443,16 +481,17 @@ app.post('/api/admin/update-balance', async (req, res) => {
     const currentPrice = await getPrice(symbol);
     
     asset.balance = balance;
-    asset.usdValue = balance * currentPrice;
     
-    saveUsers();
+    // Sauvegarder
+    saveUsers(freshUsers, freshNextId);
+    users = freshUsers;
     
     res.json({
         success: true,
         message: `Solde ${symbol} de ${user.username} mis à jour`,
         priceAtTime: currentPrice,
         newBalance: balance,
-        newUsdValue: asset.usdValue
+        newUsdValue: balance * currentPrice
     });
 });
 
@@ -469,18 +508,26 @@ app.post('/api/admin/update-address', (req, res) => {
         return res.status(400).json({ success: false, error: 'Données invalides' });
     }
     
-    const user = users.find(u => u.id === userId);
-    if (!user) {
+    // Recharger les utilisateurs
+    let { users: freshUsers, nextId: freshNextId } = loadUsers();
+    const userIndex = freshUsers.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
+    const user = freshUsers[userIndex];
     const asset = user.assets.find(a => a.symbol === symbol);
+    
     if (!asset) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
     asset.address = newAddress;
-    saveUsers();
+    
+    // Sauvegarder
+    saveUsers(freshUsers, freshNextId);
+    users = freshUsers;
     
     res.json({
         success: true,
@@ -497,19 +544,25 @@ app.delete('/api/admin/delete-user', (req, res) => {
     }
     
     const { userId } = req.body;
-    const index = users.findIndex(u => u.id === userId);
+    
+    // Recharger les utilisateurs
+    let { users: freshUsers, nextId: freshNextId } = loadUsers();
+    const index = freshUsers.findIndex(u => u.id === userId);
     
     if (index === -1) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    users.splice(index, 1);
-    saveUsers();
+    freshUsers.splice(index, 1);
+    
+    // Sauvegarder
+    saveUsers(freshUsers, freshNextId);
+    users = freshUsers;
     
     res.json({ success: true, message: 'Utilisateur supprimé' });
 });
 
-// Route pour obtenir les prix en temps réel (API publique)
+// Route pour obtenir les prix en temps réel
 app.get('/api/prices', async (req, res) => {
     const prices = await getAllPrices();
     res.json({ success: true, prices: prices });
@@ -536,5 +589,6 @@ app.get('/coin-detail.html', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
     console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-    console.log(`💰 Prix en temps réel via CoinGecko\n`);
+    console.log(`📁 Fichier de données: ${DATA_FILE}`);
+    console.log(`👥 Utilisateurs chargés: ${users.length}\n`);
 });
