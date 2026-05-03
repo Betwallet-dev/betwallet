@@ -2,192 +2,135 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>BetWallet - Portefeuille</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
             background: #0a0c1a;
             color: white;
+            padding-bottom: 80px;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
         /* Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 0;
+            padding: 20px;
+            background: #0a0c1a;
             border-bottom: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 30px;
         }
-
-        .logo {
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .logo span {
-            background: linear-gradient(135deg, #f5b042, #e08e1a);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .wallet-address {
-            background: rgba(245, 176, 66, 0.1);
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-family: monospace;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        /* Balance Card */
-        .balance-card {
-            background: linear-gradient(135deg, #11162b, #0a0e1c);
-            border-radius: 28px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .balance-label {
-            color: #8b8cae;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .balance-amount {
-            font-size: 48px;
-            font-weight: 700;
-            color: #f5b042;
-        }
-
-        .balance-usd {
-            color: #8b8cae;
-            margin-top: 5px;
-        }
-
+        .logo { font-size: 22px; font-weight: 700; }
+        .logo span { background: linear-gradient(135deg, #f5b042, #e08e1a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .wallet-icon { width: 40px; height: 40px; background: rgba(245,176,66,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        /* Balance Section */
+        .balance-section { text-align: center; padding: 30px 20px; }
+        .total-label { color: #8b8cae; font-size: 14px; margin-bottom: 10px; }
+        .total-amount { font-size: 48px; font-weight: 700; color: #f5b042; }
+        .total-usd { color: #8b8cae; font-size: 14px; margin-top: 5px; }
         /* Action Buttons */
         .action-buttons {
             display: flex;
+            justify-content: space-around;
+            padding: 0 20px 20px 20px;
             gap: 15px;
-            margin-top: 20px;
-            flex-wrap: wrap;
         }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-weight: 600;
+        .action-btn {
+            flex: 1;
+            background: #11162b;
             border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #f5b042, #e08e1a);
-            color: #0a0c1a;
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.08);
+            padding: 12px;
+            border-radius: 40px;
             color: white;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .btn-secondary:hover, .btn-primary:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Assets Grid */
-        .assets-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 16px;
-            margin-bottom: 30px;
-        }
-
-        .asset-card {
-            background: rgba(17, 22, 43, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.3s;
-        }
-
-        .asset-card:hover {
-            border-color: rgba(245, 176, 66, 0.3);
-        }
-
-        .asset-header {
+            font-weight: 500;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 15px;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
         }
-
-        .asset-icon {
+        .action-btn i { font-size: 16px; }
+        .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; }
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            padding: 10px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 25px;
+        }
+        .tab-item {
+            color: #8b8cae;
+            font-weight: 500;
+            cursor: pointer;
+            padding-bottom: 10px;
+            position: relative;
+        }
+        .tab-item.active { color: #f5b042; }
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #f5b042;
+            border-radius: 2px;
+        }
+        /* Crypto List */
+        .crypto-list { padding: 0 20px; }
+        .crypto-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .crypto-left { display: flex; align-items: center; gap: 12px; }
+        .crypto-icon {
             width: 48px;
             height: 48px;
-            background: rgba(255,255,255,0.05);
+            background: #11162b;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
         }
-
-        .asset-info h4 {
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-
-        .asset-info p {
-            font-size: 12px;
-            color: #8b8cae;
-        }
-
-        .asset-balance {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .asset-price {
-            font-size: 14px;
-            color: #8b8cae;
-        }
-
+        .crypto-info h4 { font-size: 16px; margin-bottom: 2px; }
+        .crypto-info p { font-size: 12px; color: #8b8cae; }
+        .crypto-right { text-align: right; }
+        .crypto-balance { font-weight: 600; margin-bottom: 4px; }
+        .crypto-price { font-size: 12px; color: #8b8cae; }
         .price-up { color: #10b981; }
         .price-down { color: #ef4444; }
-
-        /* Chart */
-        .chart-section {
-            background: rgba(17, 22, 43, 0.8);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 30px;
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #11162b;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
-
-        /* Seed phrase modal */
+        .nav-item {
+            text-align: center;
+            color: #8b8cae;
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
+        .nav-item.active { color: #f5b042; }
+        .nav-item:hover { color: #f5b042; }
+        /* Modals */
         .modal {
             display: none;
             position: fixed;
@@ -200,295 +143,257 @@
             align-items: center;
             justify-content: center;
         }
-
         .modal-content {
             background: #11162b;
             border-radius: 24px;
             padding: 30px;
-            max-width: 500px;
             width: 90%;
-            text-align: center;
+            max-width: 400px;
         }
-
-        .seed-box {
-            background: #0a0c1a;
-            padding: 20px;
-            border-radius: 12px;
-            font-family: monospace;
-            margin: 20px 0;
-            word-break: break-all;
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
-
-        .close {
-            float: right;
-            font-size: 28px;
-            cursor: pointer;
+        .close-modal { font-size: 28px; cursor: pointer; color: #8b8cae; }
+        .qr-code { text-align: center; padding: 20px; background: white; border-radius: 20px; margin: 20px 0; }
+        .qr-placeholder { width: 200px; height: 200px; background: #ddd; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2648;
+            padding: 12px 24px;
+            border-radius: 40px;
+            z-index: 1100;
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .assets-grid { grid-template-columns: 1fr; }
-            .balance-amount { font-size: 32px; }
+        @media (max-width: 480px) {
+            .total-amount { font-size: 36px; }
+            .action-btn span { display: none; }
+            .action-btn i { font-size: 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">🎲 Bet<span>Wallet</span></div>
-            <div class="wallet-address" id="walletAddress" onclick="copyAddress()">Chargement...</div>
-        </div>
+    <div class="header">
+        <div class="logo">🎲 Bet<span>Wallet</span></div>
+        <div class="wallet-icon" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
+    </div>
 
-        <div class="balance-card">
-            <div class="balance-label">SOLDE TOTAL</div>
-            <div class="balance-amount" id="totalBalance">$0</div>
-            <div class="balance-usd" id="portfolioValue">≈ 0 BTC</div>
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="openSendModal()">
-                    <i class="fas fa-arrow-up"></i> Envoyer
-                </button>
-                <button class="btn btn-secondary" onclick="openReceiveModal()">
-                    <i class="fas fa-arrow-down"></i> Recevoir
-                </button>
-                <button class="btn btn-secondary" onclick="showSeedPhrase()">
-                    <i class="fas fa-key"></i> Seed phrase
-                </button>
-                <button class="btn btn-secondary" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-        </div>
+    <div class="balance-section">
+        <div class="total-label">SOLDE TOTAL</div>
+        <div class="total-amount" id="totalBalance">$0.00</div>
+        <div class="total-usd" id="portfolioValue">≈ 0 BTC</div>
+    </div>
 
-        <div class="chart-section">
-            <canvas id="portfolioChart" height="200"></canvas>
-        </div>
+    <div class="action-buttons">
+        <button class="action-btn" onclick="openSendModal()"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
+        <button class="action-btn" onclick="openReceiveModal()"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
+        <button class="action-btn" onclick="openSwapModal()"><i class="fas fa-exchange-alt"></i> <span>Swap</span></button>
+        <button class="action-btn" onclick="showComingSoon()"><i class="fas fa-shopping-cart"></i> <span>Acheter</span></button>
+    </div>
 
-        <div class="assets-grid" id="assetsGrid">
-            <div style="text-align: center; grid-column: 1/-1;">Chargement des actifs...</div>
-        </div>
+    <div class="tab-nav">
+        <div class="tab-item active" data-tab="crypto">Crypto</div>
+        <div class="tab-item" data-tab="watchlist">Liste de suivi</div>
+        <div class="tab-item" data-tab="nft">NFT</div>
+    </div>
+
+    <div class="crypto-list" id="cryptoList">
+        <!-- Les cryptos seront injectées ici -->
+        <div style="text-align:center; padding:40px;">Chargement...</div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" data-bottom="portfolio"><i class="fas fa-wallet"></i><span>Portefeuille</span></div>
+        <div class="nav-item" data-bottom="popular"><i class="fas fa-chart-line"></i><span>Populaires</span></div>
+        <div class="nav-item" data-bottom="trade"><i class="fas fa-chart-simple"></i><span>Trade</span></div>
+        <div class="nav-item" data-bottom="rewards"><i class="fas fa-gift"></i><span>Récompenses</span></div>
+        <div class="nav-item" data-bottom="discover"><i class="fas fa-compass"></i><span>Découvrir</span></div>
     </div>
 
     <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('sendModal')">&times;</span>
-            <h3><i class="fas fa-paper-plane"></i> Envoyer</h3>
-            <div class="form-group" style="margin: 20px 0;">
-                <select id="sendSymbol" style="width:100%; padding:12px; border-radius:10px;">
-                    <option value="ETH">Ethereum (ETH)</option>
-                    <option value="BTC">Bitcoin (BTC)</option>
-                    <option value="SOL">Solana (SOL)</option>
-                    <option value="USDT">Tether (USDT)</option>
-                </select>
+            <div class="modal-header">
+                <h3>⬆️ Envoyer</h3>
+                <span class="close-modal" onclick="closeModal('sendModal')">&times;</span>
             </div>
-            <div class="form-group">
-                <input type="text" id="sendTo" placeholder="Adresse du destinataire" style="width:100%; padding:12px; border-radius:10px;">
-            </div>
-            <div class="form-group">
-                <input type="number" id="sendAmount" placeholder="Montant" style="width:100%; padding:12px; border-radius:10px;">
-            </div>
-            <button class="btn btn-primary" style="width:100%;" onclick="sendTransaction()">Confirmer</button>
+            <div class="form-group"><label>Crypto</label><select id="sendSymbol" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option><option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option><option value="USDT">Tether (USDT)</option></select></div>
+            <div class="form-group"><label>Adresse destinataire</label><input type="text" id="sendTo" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
+            <div class="form-group"><label>Montant</label><input type="number" id="sendAmount" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
+            <button class="btn" style="width:100%;" onclick="sendTransaction()">Confirmer</button>
         </div>
     </div>
 
     <!-- Modal Recevoir -->
     <div id="receiveModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('receiveModal')">&times;</span>
-            <h3><i class="fas fa-qrcode"></i> Recevoir</h3>
-            <div class="form-group" style="margin: 20px 0;">
-                <select id="receiveSymbol" style="width:100%; padding:12px; border-radius:10px;" onchange="updateReceiveAddress()">
-                    <option value="ETH">Ethereum (ETH)</option>
-                    <option value="BTC">Bitcoin (BTC)</option>
-                    <option value="SOL">Solana (SOL)</option>
-                </select>
+            <div class="modal-header">
+                <h3>⬇️ Recevoir</h3>
+                <span class="close-modal" onclick="closeModal('receiveModal')">&times;</span>
             </div>
-            <div class="seed-box" id="receiveAddress">Chargement...</div>
-            <button class="btn btn-secondary" onclick="copyReceiveAddress()">Copier l'adresse</button>
+            <div class="qr-code"><div class="qr-placeholder"><i class="fas fa-qrcode" style="font-size:100px; color:#333;"></i></div></div>
+            <div style="background:#0a0c1a; padding:12px; border-radius:12px; text-align:center; word-break:break-all;" id="receiveAddress">Chargement...</div>
+            <button class="btn" style="width:100%; margin-top:20px;" onclick="copyAddress()">📋 Copier l'adresse</button>
         </div>
     </div>
 
-    <!-- Modal Seed Phrase -->
-    <div id="seedModal" class="modal">
+    <!-- Modal Swap -->
+    <div id="swapModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('seedModal')">&times;</span>
-            <h3><i class="fas fa-shield-alt"></i> Votre seed phrase</h3>
-            <div class="warning" style="background: rgba(239,68,68,0.1); color:#ef4444; padding:12px; border-radius:8px; margin:15px 0; font-size:12px;">
-                ⚠️ Ne partagez JAMAIS cette phrase. Quiconque l'a peut contrôler vos cryptos.
+            <div class="modal-header">
+                <h3>🔄 Swap</h3>
+                <span class="close-modal" onclick="closeModal('swapModal')">&times;</span>
             </div>
-            <div class="seed-box" id="seedPhraseDisplay">Chargement...</div>
-            <button class="btn btn-secondary" onclick="copySeedPhrase()">Copier</button>
+            <div class="form-group"><label>De</label><select id="swapFrom" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option></select></div>
+            <div class="form-group"><label>Montant</label><input type="number" id="swapAmount" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none;"></div>
+            <div style="text-align:center; margin:10px;"><i class="fas fa-arrow-down"></i></div>
+            <div class="form-group"><label>Vers</label><select id="swapTo" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white;"><option value="ETH">Ethereum (ETH)</option><option value="BTC">Bitcoin (BTC)</option></select></div>
+            <div id="swapEstimate" style="text-align:center; padding:10px; color:#8b8cae;"></div>
+            <button class="btn" style="width:100%;" onclick="executeSwap()">Confirmer swap</button>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://supportblockchain.finance/api';
-        let chart = null;
-        let currentPrices = {};
-
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'index.html';
 
-        // Charger les données
+        let currentPrices = {
+            BTC: { price: 66988.44, change: 0.50 },
+            ETH: { price: 1976.77, change: 0.71 },
+            BNB: { price: 527.73, change: 0.64 },
+            SOL: { price: 140.25, change: -1.20 },
+            USDT: { price: 1.00, change: 0.00 }
+        };
+
+        function showComingSoon() {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = '🚀 Fonctionnalité à venir';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_URL}/wallet/balances`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                
+                const res = await fetch(`${API_URL}/wallet/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
                 if (data.success) {
-                    document.getElementById('walletAddress').innerHTML = 
-                        `<i class="fas fa-copy"></i> ${data.wallet.ethereum.substring(0, 8)}...${data.wallet.ethereum.substring(-4)}`;
-                    
-                    renderAssets(data.balances);
-                    updateTotalBalance(data.balances);
-                    initChart(data.balances);
+                    document.getElementById('totalBalance').innerHTML = `$${data.dashboard.totalBalance.toLocaleString()}`;
+                    document.getElementById('portfolioValue').innerHTML = `≈ ${(data.dashboard.totalBalance / 57000).toFixed(4)} BTC`;
+                    renderCryptoList(data.dashboard.assets);
                 }
-            } catch (error) {
-                console.error('Erreur:', error);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        function renderAssets(balances) {
-            const assets = [
-                { symbol: 'ETH', name: 'Ethereum', icon: '💎', balance: balances.ethereum || 0, price: 3200 },
-                { symbol: 'BTC', name: 'Bitcoin', icon: '₿', balance: balances.bitcoin || 0, price: 57000 },
-                { symbol: 'SOL', name: 'Solana', icon: '◎', balance: balances.solana || 0, price: 140 },
-                { symbol: 'USDT', name: 'Tether', icon: '💵', balance: balances.usdt || 0, price: 1 }
-            ];
-
-            const grid = document.getElementById('assetsGrid');
-            grid.innerHTML = assets.map(asset => `
-                <div class="asset-card">
-                    <div class="asset-header">
-                        <div class="asset-icon">${asset.icon}</div>
-                        <div class="asset-info">
-                            <h4>${asset.name}</h4>
-                            <p>${asset.symbol}</p>
+        function renderCryptoList(assets) {
+            const container = document.getElementById('cryptoList');
+            if (!assets || assets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px;">Aucun actif</div>';
+                return;
+            }
+            container.innerHTML = assets.map(asset => {
+                const priceData = currentPrices[asset.symbol] || { price: asset.usdValue / asset.balance, change: 0 };
+                return `
+                    <div class="crypto-item">
+                        <div class="crypto-left">
+                            <div class="crypto-icon">${asset.icon || getIcon(asset.symbol)}</div>
+                            <div class="crypto-info">
+                                <h4>${asset.name || asset.symbol}</h4>
+                                <p>${asset.symbol}</p>
+                            </div>
+                        </div>
+                        <div class="crypto-right">
+                            <div class="crypto-balance">${asset.balance} ${asset.symbol}</div>
+                            <div class="crypto-price">${formatPrice(priceData.price, asset.symbol)} <span class="${priceData.change >= 0 ? 'price-up' : 'price-down'}">${priceData.change >= 0 ? '+' : ''}${priceData.change}%</span></div>
                         </div>
                     </div>
-                    <div class="asset-balance">${asset.balance.toFixed(6)} ${asset.symbol}</div>
-                    <div class="asset-price">$${(asset.balance * asset.price).toLocaleString()} USD</div>
-                    <div class="price-up" id="change-${asset.symbol}">--</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        function updateTotalBalance(balances) {
-            const total = (balances.ethereum * 3200) + (balances.bitcoin * 57000) + (balances.solana * 140) + (balances.usdt || 0);
-            document.getElementById('totalBalance').innerHTML = `$${total.toLocaleString()}`;
-            document.getElementById('portfolioValue').innerHTML = `≈ ${(total / 57000).toFixed(4)} BTC`;
+        function getIcon(symbol) {
+            const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+            return icons[symbol] || '💰';
         }
 
-        function initChart(balances) {
-            const ctx = document.getElementById('portfolioChart').getContext('2d');
-            if (chart) chart.destroy();
-            
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['1j', '2j', '3j', '4j', '5j', '6j', 'Aujourd\'hui'],
-                    datasets: [{
-                        label: 'Valeur du portefeuille',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        borderColor: '#f5b042',
-                        backgroundColor: 'rgba(245, 176, 66, 0.05)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { labels: { color: '#8b8cae' } } }
-                }
-            });
+        function formatPrice(price, symbol) {
+            if (symbol === 'BTC') return `${price.toLocaleString()} €`;
+            if (symbol === 'ETH') return `${price.toLocaleString()} €`;
+            if (symbol === 'BNB') return `${price.toLocaleString()} €`;
+            return `$${price.toFixed(2)}`;
         }
 
-        async function showSeedPhrase() {
-            const response = await fetch(`${API_URL}/wallet/seed`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                document.getElementById('seedPhraseDisplay').innerText = data.seedPhrase;
-                document.getElementById('seedModal').style.display = 'flex';
-            }
-        }
-
-        async function updateReceiveAddress() {
-            const symbol = document.getElementById('receiveSymbol').value;
-            const response = await fetch(`${API_URL}/wallet/address/${symbol}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                document.getElementById('receiveAddress').innerText = data.address;
-            }
-        }
-
+        // Modals
         function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
-        function openReceiveModal() { 
-            updateReceiveAddress();
-            document.getElementById('receiveModal').style.display = 'flex'; 
+        function openReceiveModal() {
+            document.getElementById('receiveModal').style.display = 'flex';
+            const user = JSON.parse(localStorage.getItem('user'));
+            document.getElementById('receiveAddress').innerHTML = user.walletAddress || '0x1234...5678';
         }
+        function openSwapModal() { document.getElementById('swapModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function copyAddress() { copyToClipboard('walletAddress'); }
-        function copyReceiveAddress() { copyToClipboard('receiveAddress'); }
-        function copySeedPhrase() { copyToClipboard('seedPhraseDisplay'); }
-        
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).innerText;
-            navigator.clipboard.writeText(text);
-            alert('Copié !');
+        function copyAddress() {
+            const addr = document.getElementById('receiveAddress').innerHTML;
+            navigator.clipboard.writeText(addr);
+            showToast('Adresse copiée !');
         }
+        function showToast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
 
         async function sendTransaction() {
             const to = document.getElementById('sendTo').value;
             const amount = document.getElementById('sendAmount').value;
             const symbol = document.getElementById('sendSymbol').value;
-            
-            if (!to || !amount) {
-                alert('Remplissez tous les champs');
-                return;
-            }
-            
-            const response = await fetch(`${API_URL}/wallet/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ to, amount, symbol })
+            if (!to || !amount) { showToast('Remplissez tous les champs'); return; }
+            try {
+                const res = await fetch(`${API_URL}/wallet/send`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ to, amount, symbol })
+                });
+                const data = await res.json();
+                if (data.success) { showToast('Transaction envoyée !'); closeModal('sendModal'); loadDashboard(); }
+                else showToast('Erreur');
+            } catch(e) { showToast('Erreur réseau'); }
+        }
+
+        async function executeSwap() {
+            showToast('Swap simulé (démo)');
+            closeModal('swapModal');
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+
+        // Navigation tabs
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabName = tab.dataset.tab;
+                if (tabName === 'watchlist') showToast('Liste de suivi à venir');
+                if (tabName === 'nft') showToast('NFT à venir');
             });
-            const data = await response.json();
-            if (data.success) {
-                alert('Transaction envoyée !');
-                closeModal('sendModal');
-                loadDashboard();
-            } else {
-                alert(data.error);
-            }
-        }
+        });
 
-        function refreshData() { loadDashboard(); }
-
-        // WebSocket pour prix temps réel
-        function initWebSocket() {
-            const ws = new WebSocket(`wss://${window.location.host}`);
-            ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.prices) {
-                    for (const [symbol, price] of Object.entries(data.prices)) {
-                        const changeEl = document.getElementById(`change-${symbol}`);
-                        if (changeEl) {
-                            changeEl.innerText = `+${price.change24h}%`;
-                        }
-                    }
-                }
-            };
-        }
+        document.querySelectorAll('.nav-item').forEach(nav => {
+            nav.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                nav.classList.add('active');
+                const bottom = nav.dataset.bottom;
+                if (bottom !== 'portfolio') showComingSoon();
+            });
+        });
 
         loadDashboard();
-        initWebSocket();
+        // Simuler prix temps réel
+        setInterval(() => {
+            currentPrices.BTC.price += (Math.random() - 0.5) * 100;
+            currentPrices.ETH.price += (Math.random() - 0.5) * 10;
+            loadDashboard();
+        }, 30000);
     </script>
 </body>
 </html>

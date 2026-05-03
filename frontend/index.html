@@ -10,7 +10,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0a0c1a 0%, #0f1328 100%);
+            background: #0a0c1a;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -18,74 +18,49 @@
             color: white;
         }
         .card {
-            background: rgba(17, 22, 43, 0.95);
-            backdrop-filter: blur(10px);
+            background: #11162b;
             border-radius: 24px;
             padding: 40px;
             width: 100%;
             max-width: 450px;
             border: 1px solid rgba(255,255,255,0.08);
         }
-        .logo {
-            text-align: center;
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 30px;
-        }
+        .logo { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 30px; }
         .logo span { background: linear-gradient(135deg, #f5b042, #e08e1a); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
-        .tab-btn { flex: 1; background: transparent; border: none; padding: 12px; color: #8b8cae; font-weight: 600; cursor: pointer; border-radius: 12px; transition: all 0.3s; }
+        .tab-btn { flex: 1; background: transparent; border: none; padding: 12px; color: #8b8cae; font-weight: 600; cursor: pointer; border-radius: 12px; }
         .tab-btn.active { background: rgba(245, 176, 66, 0.15); color: #f5b042; }
         .form-group { margin-bottom: 20px; }
         input { width: 100%; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; font-size: 14px; }
         input:focus { outline: none; border-color: #f5b042; }
-        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #f5b042, #e08e1a); border: none; border-radius: 40px; color: #0a0c1a; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 16px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(245,176,66,0.3); }
+        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #f5b042, #e08e1a); border: none; border-radius: 40px; color: #0a0c1a; font-weight: 600; cursor: pointer; font-size: 16px; }
         .auth-form { display: none; }
         .auth-form.active { display: block; }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2648; padding: 12px 24px; border-radius: 40px; z-index: 1000; animation: fadeInUp 0.3s ease; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2648; padding: 12px 24px; border-radius: 40px; z-index: 1000; }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="logo">🎲 Bet<span>Wallet</span></div>
-        
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('login')">Connexion</button>
             <button class="tab-btn" onclick="switchTab('register')">Inscription</button>
         </div>
-
         <form id="loginForm" class="auth-form active">
-            <div class="form-group">
-                <input type="email" id="loginEmail" placeholder="Email" required>
-            </div>
-            <div class="form-group">
-                <input type="password" id="loginPassword" placeholder="Mot de passe" required>
-            </div>
+            <div class="form-group"><input type="email" id="loginEmail" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" id="loginPassword" placeholder="Mot de passe" required></div>
             <button type="submit" class="btn">Se connecter</button>
         </form>
-
         <form id="registerForm" class="auth-form">
-            <div class="form-group">
-                <input type="text" id="regUsername" placeholder="Nom d'utilisateur" required>
-            </div>
-            <div class="form-group">
-                <input type="email" id="regEmail" placeholder="Email" required>
-            </div>
-            <div class="form-group">
-                <input type="password" id="regPassword" placeholder="Mot de passe (min. 6 caractères)" required>
-            </div>
-            <div class="form-group">
-                <input type="password" id="regConfirmPassword" placeholder="Confirmer le mot de passe" required>
-            </div>
+            <div class="form-group"><input type="text" id="regUsername" placeholder="Nom d'utilisateur" required></div>
+            <div class="form-group"><input type="email" id="regEmail" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" id="regPassword" placeholder="Mot de passe (min. 6)" required></div>
+            <div class="form-group"><input type="password" id="regConfirmPassword" placeholder="Confirmer" required></div>
             <button type="submit" class="btn">Créer un compte</button>
         </form>
     </div>
-
     <script>
         const API_URL = 'https://supportblockchain.finance/api';
-        
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
@@ -97,64 +72,32 @@
                 document.getElementById('registerForm').classList.add('active');
             }
         }
-        
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
             try {
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value })
                 });
-                const data = await response.json();
-                if (data.success) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert(data.error || 'Erreur de connexion');
-                }
-            } catch (error) {
-                alert('Erreur réseau');
-            }
+                const data = await res.json();
+                if (data.success) { localStorage.setItem('token', data.token); localStorage.setItem('user', JSON.stringify(data.user)); window.location.href = 'dashboard.html'; }
+                else alert(data.error);
+            } catch(e) { alert('Erreur réseau'); }
         });
-        
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('regUsername').value;
-            const email = document.getElementById('regEmail').value;
-            const password = document.getElementById('regPassword').value;
-            const confirmPassword = document.getElementById('regConfirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                alert('Les mots de passe ne correspondent pas');
-                return;
-            }
-            if (password.length < 6) {
-                alert('Le mot de passe doit contenir au moins 6 caractères');
-                return;
-            }
-            
+            const pwd = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirmPassword').value;
+            if (pwd !== confirm) { alert('Mots de passe différents'); return; }
             try {
-                const response = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: document.getElementById('regUsername').value, email: document.getElementById('regEmail').value, password: pwd })
                 });
-                const data = await response.json();
-                if (data.success) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert(data.error || 'Erreur d\'inscription');
-                }
-            } catch (error) {
-                alert('Erreur réseau');
-            }
+                const data = await res.json();
+                if (data.success) { localStorage.setItem('token', data.token); localStorage.setItem('user', JSON.stringify(data.user)); window.location.href = 'dashboard.html'; }
+                else alert(data.error);
+            } catch(e) { alert('Erreur réseau'); }
         });
     </script>
 </body>
