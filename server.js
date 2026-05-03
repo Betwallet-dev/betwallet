@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,54 +11,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// ==================== DOSSIER DE DONNÉES PERSISTANT ====================
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
+// ==================== MONGODB CONNEXION ====================
+const MONGODB_URI = 'mongodb+srv://betwallet_user:BetWallet2024@cluster0.i7d5ua6.mongodb.net/?appName=Cluster0';
+const DB_NAME = 'betwallet';
 
-// Créer le dossier data s'il n'existe pas
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    console.log(`📁 Dossier créé: ${DATA_DIR}`);
-}
+let db;
+let usersCollection;
 
-// ==================== FONCTIONS DE STOCKAGE ====================
-function loadUsers() {
+async function connectDB() {
     try {
-        if (fs.existsSync(USERS_FILE)) {
-            const data = fs.readFileSync(USERS_FILE, 'utf8');
-            const saved = JSON.parse(data);
-            console.log(`✅ ${saved.users?.length || 0} utilisateurs chargés depuis ${USERS_FILE}`);
-            return {
-                users: saved.users || [],
-                nextId: saved.nextId || 1
-            };
-        } else {
-            console.log('📄 Aucun fichier users.json trouvé, création d\'un nouveau fichier');
-            return { users: [], nextId: 1 };
-        }
-    } catch (e) {
-        console.error('❌ Erreur chargement:', e);
-        return { users: [], nextId: 1 };
+        const client = new MongoClient(MONGODB_URI);
+        await client.connect();
+        db = client.db(DB_NAME);
+        usersCollection = db.collection('users');
+        console.log('✅ MongoDB connecté avec succès !');
+    } catch (error) {
+        console.error('❌ Erreur MongoDB:', error);
+        process.exit(1);
     }
-}
-
-function saveUsers(usersData, nextIdData) {
-    try {
-        fs.writeFileSync(USERS_FILE, JSON.stringify({ users: usersData, nextId: nextIdData }, null, 2));
-        console.log(`💾 ${usersData.length} utilisateurs sauvegardés dans ${USERS_FILE}`);
-        return true;
-    } catch (e) {
-        console.error('❌ Erreur sauvegarde:', e);
-        return false;
-    }
-}
-
-// Chargement initial
-let { users, nextId } = loadUsers();
-
-// Sauvegarde automatique après chaque modification
-function persistUsers() {
-    saveUsers(users, nextId);
 }
 
 // ==================== PRIX TEMPS RÉEL ====================
@@ -133,95 +103,98 @@ function generateCryptoAddress(symbol) {
     return `${symbol.toLowerCase()}_${crypto.randomBytes(16).toString('hex')}`;
 }
 
+async function getNextId() {
+    const lastUser = await usersCollection.findOne({}, { sort: { id: -1 } });
+    return lastUser ? lastUser.id + 1 : 1;
+}
+
 // ==================== ROUTES ====================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'BetWallet API running' });
 });
 
 // INSCRIPTION
-app.post('/api/auth/register', (req, res) => {
-    const { username, email, password } = req.body;
-    
-    if (!username || !email || !password) {
-        return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
+        
+        if (!username || !email || !password) {
+            return res.status(400).json({ success: false, error: 'Tous les champs sont requis' });
+        }
+        
+        const existing = await usersCollection.findOne({ email: email });
+        if (existing) {
+            return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
+        }
+        
+        const userId = await getNextId();
+        const walletAddress = generateWalletAddress();
+        
+        const assets = ALL_CRYPTOS.map(symbol => ({
+            symbol: symbol,
+            name: getCryptoName(symbol),
+            balance: 0,
+            usdValue: 0,
+            address: generateCryptoAddress(symbol)
+        }));
+        
+        const newUser = {
+            id: userId,
+            username,
+            email,
+            password,
+            walletAddress,
+            assets: assets,
+            transactions: [],
+            created_at: new Date().toISOString()
+        };
+        
+        await usersCollection.insertOne(newUser);
+        
+        const token = `token_${userId}_${Date.now()}`;
+        
+        res.json({
+            success: true,
+            token,
+            user: { id: userId, username, email, walletAddress }
+        });
+    } catch (error) {
+        console.error('Erreur inscription:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    
-    // Recharger pour éviter les conflits
-    const { users: freshUsers, nextId: freshNextId } = loadUsers();
-    
-    if (freshUsers.find(u => u.email === email)) {
-        return res.status(400).json({ success: false, error: 'Email déjà utilisé' });
-    }
-    
-    const userId = freshNextId;
-    const walletAddress = generateWalletAddress();
-    
-    // Créer les actifs pour TOUTES les cryptos (solde 0)
-    const assets = ALL_CRYPTOS.map(symbol => ({
-        symbol: symbol,
-        name: getCryptoName(symbol),
-        balance: 0,
-        usdValue: 0,
-        address: generateCryptoAddress(symbol)
-    }));
-    
-    const newUser = {
-        id: userId,
-        username,
-        email,
-        password,
-        walletAddress,
-        assets: assets,
-        transactions: [],
-        created_at: new Date().toISOString()
-    };
-    
-    freshUsers.push(newUser);
-    saveUsers(freshUsers, freshNextId + 1);
-    
-    // Mettre à jour la variable globale
-    users = freshUsers;
-    nextId = freshNextId + 1;
-    
-    const token = `token_${userId}_${Date.now()}`;
-    
-    res.json({
-        success: true,
-        token,
-        user: { id: userId, username, email, walletAddress }
-    });
 });
 
 // CONNEXION
-app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    
-    // Recharger depuis le fichier pour avoir les dernières données
-    const { users: freshUsers } = loadUsers();
-    const user = freshUsers.find(u => u.email === email && u.password === password);
-    
-    if (!user) {
-        return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
-    }
-    
-    const token = `token_${user.id}_${Date.now()}`;
-    res.json({
-        success: true,
-        token,
-        user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            walletAddress: user.walletAddress
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        const user = await usersCollection.findOne({ email: email, password: password });
+        
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
         }
-    });
+        
+        const token = `token_${user.id}_${Date.now()}`;
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                walletAddress: user.walletAddress
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
 });
 
 // MOT DE PASSE OUBLIÉ
-app.post('/api/auth/forgot-password', (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
-    const { users: freshUsers } = loadUsers();
-    const user = freshUsers.find(u => u.email === email);
+    const user = await usersCollection.findOne({ email: email });
     if (!user) {
         return res.json({ success: true, message: 'Si cet email existe, vous recevrez un lien.' });
     }
@@ -229,7 +202,7 @@ app.post('/api/auth/forgot-password', (req, res) => {
     res.json({ success: true, resetToken: resetToken });
 });
 
-app.post('/api/auth/reset-password', (req, res) => {
+app.post('/api/auth/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
     if (!newPassword || newPassword.length < 6) {
         return res.status(400).json({ success: false, error: 'Mot de passe trop court' });
@@ -245,8 +218,7 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    const { users: freshUsers } = loadUsers();
-    const user = freshUsers.find(u => u.id === userId);
+    const user = await usersCollection.findOne({ id: userId });
     
     if (!user) {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
@@ -291,24 +263,21 @@ app.post('/api/wallet/send', async (req, res) => {
     }
     
     const userId = parseInt(token.split('_')[1]);
-    let { users: freshUsers, nextId: freshNextId } = loadUsers();
-    const userIndex = freshUsers.findIndex(u => u.id === userId);
+    const user = await usersCollection.findOne({ id: userId });
     
-    if (userIndex === -1) {
+    if (!user) {
         return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    const user = freshUsers[userIndex];
-    const asset = user.assets.find(a => a.symbol === symbol);
-    
-    if (!asset || asset.balance < amount) {
+    const assetIndex = user.assets.findIndex(a => a.symbol === symbol);
+    if (assetIndex === -1 || user.assets[assetIndex].balance < amount) {
         return res.status(400).json({ success: false, error: 'Solde insuffisant' });
     }
     
     const price = await getPrice(symbol);
     const usdValue = amount * price;
     
-    asset.balance -= amount;
+    user.assets[assetIndex].balance -= amount;
     
     user.transactions.unshift({
         type: 'send',
@@ -321,8 +290,7 @@ app.post('/api/wallet/send', async (req, res) => {
         status: 'completed'
     });
     
-    saveUsers(freshUsers, freshNextId);
-    users = freshUsers;
+    await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets, transactions: user.transactions } });
     
     res.json({
         success: true,
@@ -357,7 +325,7 @@ app.get('/api/admin/users', async (req, res) => {
         return res.status(401).json({ success: false });
     }
     
-    const { users: freshUsers } = loadUsers();
+    const freshUsers = await usersCollection.find({}).toArray();
     const prices = await getAllPrices();
     
     const usersWithValues = freshUsers.map(u => {
@@ -398,25 +366,21 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     }
     
     const { userId, symbol, amount } = req.body;
+    const user = await usersCollection.findOne({ id: userId });
     
-    let { users: freshUsers, nextId: freshNextId } = loadUsers();
-    const userIndex = freshUsers.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
+    if (!user) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    const user = freshUsers[userIndex];
-    const asset = user.assets.find(a => a.symbol === symbol);
-    
-    if (!asset) {
+    const assetIndex = user.assets.findIndex(a => a.symbol === symbol);
+    if (assetIndex === -1) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
     const priceAtTime = await getPrice(symbol);
     const usdValueAdded = amount * priceAtTime;
     
-    asset.balance += amount;
+    user.assets[assetIndex].balance += amount;
     
     user.transactions.unshift({
         type: 'receive',
@@ -429,15 +393,14 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         status: 'completed'
     });
     
-    saveUsers(freshUsers, freshNextId);
-    users = freshUsers;
+    await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets, transactions: user.transactions } });
     
     res.json({
         success: true,
         message: `${amount} ${symbol} envoyé à ${user.username}`,
         priceAtTime: priceAtTime,
         usdValue: usdValueAdded,
-        newBalance: asset.balance
+        newBalance: user.assets[assetIndex].balance
     });
 });
 
@@ -448,61 +411,50 @@ app.post('/api/admin/update-balance', async (req, res) => {
     }
     
     const { userId, symbol, balance } = req.body;
+    const user = await usersCollection.findOne({ id: userId });
     
-    let { users: freshUsers, nextId: freshNextId } = loadUsers();
-    const userIndex = freshUsers.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
+    if (!user) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    const user = freshUsers[userIndex];
-    const asset = user.assets.find(a => a.symbol === symbol);
-    
-    if (!asset) {
+    const assetIndex = user.assets.findIndex(a => a.symbol === symbol);
+    if (assetIndex === -1) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
     const currentPrice = await getPrice(symbol);
-    asset.balance = balance;
+    user.assets[assetIndex].balance = balance;
     
-    saveUsers(freshUsers, freshNextId);
-    users = freshUsers;
+    await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets } });
     
     res.json({
         success: true,
         message: `Solde ${symbol} de ${user.username} mis à jour`,
-        priceAtTime: currentPrice,
         newBalance: balance,
         newUsdValue: balance * currentPrice
     });
 });
 
-app.post('/api/admin/update-address', (req, res) => {
+app.post('/api/admin/update-address', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
         return res.status(401).json({ success: false });
     }
     
     const { userId, symbol, newAddress } = req.body;
+    const user = await usersCollection.findOne({ id: userId });
     
-    let { users: freshUsers, nextId: freshNextId } = loadUsers();
-    const userIndex = freshUsers.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
+    if (!user) {
         return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
     }
     
-    const user = freshUsers[userIndex];
-    const asset = user.assets.find(a => a.symbol === symbol);
-    
-    if (!asset) {
+    const assetIndex = user.assets.findIndex(a => a.symbol === symbol);
+    if (assetIndex === -1) {
         return res.status(404).json({ success: false, error: 'Crypto non trouvée' });
     }
     
-    asset.address = newAddress;
-    saveUsers(freshUsers, freshNextId);
-    users = freshUsers;
+    user.assets[assetIndex].address = newAddress;
+    await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets } });
     
     res.json({
         success: true,
@@ -510,24 +462,14 @@ app.post('/api/admin/update-address', (req, res) => {
     });
 });
 
-app.delete('/api/admin/delete-user', (req, res) => {
+app.delete('/api/admin/delete-user', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (token !== 'admin_secret_token') {
         return res.status(401).json({ success: false });
     }
     
     const { userId } = req.body;
-    
-    let { users: freshUsers, nextId: freshNextId } = loadUsers();
-    const index = freshUsers.findIndex(u => u.id === userId);
-    
-    if (index === -1) {
-        return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
-    }
-    
-    freshUsers.splice(index, 1);
-    saveUsers(freshUsers, freshNextId);
-    users = freshUsers;
+    await usersCollection.deleteOne({ id: userId });
     
     res.json({ success: true, message: 'Utilisateur supprimé' });
 });
@@ -555,10 +497,13 @@ app.get('/coin-detail.html', (req, res) => {
 });
 
 // ==================== DÉMARRAGE ====================
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
-    console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-    console.log(`📁 Dossier données: ${DATA_DIR}`);
-    console.log(`📄 Fichier utilisateurs: ${USERS_FILE}`);
-    console.log(`👥 ${users.length} utilisateurs en mémoire\n`);
-});
+async function startServer() {
+    await connectDB();
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
+        console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
+        console.log(`🍃 Base de données: MongoDB (gratuit / persistant)\n`);
+    });
+}
+
+startServer();
