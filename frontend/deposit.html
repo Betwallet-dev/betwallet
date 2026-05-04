@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetWallet - Dépôt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c1a;
+            color: white;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #0a0c1a;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .back-btn {
+            background: rgba(245,176,66,0.15);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .container { padding: 20px; }
+        .crypto-selector {
+            background: #11162b;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .warning-box {
+            background: rgba(239,68,68,0.1);
+            border-left: 3px solid #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ef4444;
+            margin: 20px 0;
+        }
+        .address-box {
+            background: #0a0c1a;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #f5b042, #e08e1a);
+            border: none;
+            border-radius: 40px;
+            color: #0a0c1a;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .crypto-list { margin-top: 20px; }
+        .crypto-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .crypto-option:hover { background: rgba(245,176,66,0.1); border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="back-btn" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i></div>
+        <h3>Dépôt de cryptos</h3>
+    </div>
+
+    <div class="container">
+        <div class="crypto-selector" onclick="showCryptoList()">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span id="selectedCryptoIcon" style="font-size: 32px;">₿</span>
+                <div>
+                    <strong id="selectedCryptoName">Bitcoin</strong>
+                    <p id="selectedCryptoSymbol" style="font-size: 12px; color: #8b8cae;">BTC</p>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+
+        <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i> N'envoyez que des <strong id="warningCoinName">Bitcoin (BTC)</strong> à cette adresse.<br>
+            Les autres actifs seront perdus.
+        </div>
+
+        <div class="address-box" id="depositAddress">Chargement...</div>
+
+        <button class="btn" onclick="copyDepositAddress()">📋 Copier l'adresse</button>
+
+        <div id="cryptoList" style="display: none; margin-top: 20px;">
+            <div class="crypto-option" onclick="selectCrypto('BTC', 'Bitcoin', '₿')">
+                <span style="font-size: 28px;">₿</span>
+                <div><strong>Bitcoin</strong><p style="font-size:12px; color:#8b8cae;">BTC</p></div>
+            </div>
+            <div class="crypto-option" onclick="selectCrypto('ETH', 'Ethereum', 'Ξ')">
+                <span style="font-size: 28px;">Ξ</span>
+                <div><strong>Ethereum</strong><p style="font-size:12px; color:#8b8cae;">ETH</p></div>
+            </div>
+            <!-- Ajoutez toutes les autres cryptos ici -->
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '';
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'index.html';
+
+        let currentSymbol = 'BTC';
+        let currentName = 'Bitcoin';
+        let currentIcon = '₿';
+        let cryptoAddress = '';
+
+        async function fetchAddress(symbol) {
+            try {
+                const response = await fetch(`/api/wallet/address/${symbol}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    cryptoAddress = data.address;
+                    document.getElementById('depositAddress').innerHTML = cryptoAddress;
+                    document.getElementById('warningCoinName').innerHTML = `${currentName} (${currentSymbol})`;
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                cryptoAddress = `Adresse ${symbol} non disponible`;
+                document.getElementById('depositAddress').innerHTML = cryptoAddress;
+            }
+        }
+
+        function showCryptoList() {
+            const list = document.getElementById('cryptoList');
+            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function selectCrypto(symbol, name, icon) {
+            currentSymbol = symbol;
+            currentName = name;
+            currentIcon = icon;
+            document.getElementById('selectedCryptoIcon').innerHTML = icon;
+            document.getElementById('selectedCryptoName').innerHTML = name;
+            document.getElementById('selectedCryptoSymbol').innerHTML = symbol;
+            document.getElementById('cryptoList').style.display = 'none';
+            fetchAddress(symbol);
+        }
+
+        function copyDepositAddress() {
+            const address = document.getElementById('depositAddress').innerHTML;
+            navigator.clipboard.writeText(address);
+            showToast('Adresse copiée !');
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        fetchAddress('BTC');
+    </script>
+</body>
+</html>

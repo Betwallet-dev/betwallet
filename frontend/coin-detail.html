@@ -14,6 +14,7 @@
             font-family: 'Inter', sans-serif;
             background: #0a0c1a;
             color: white;
+            padding-bottom: 80px;
         }
         .header {
             display: flex;
@@ -121,6 +122,16 @@
             text-align: center;
             margin-top: 15px;
         }
+        .warning-box {
+            background: rgba(239,68,68,0.1);
+            border-left: 3px solid #ef4444;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ef4444;
+            margin-bottom: 15px;
+            text-align: center;
+        }
         input {
             width: 100%;
             padding: 12px;
@@ -202,9 +213,16 @@
     <div id="receiveModal" class="modal">
         <div class="modal-content">
             <div class="modal-header"><h3>⬇️ Recevoir <span id="receiveSymbolLabel">BTC</span></h3><span class="close-modal" onclick="closeModal('receiveModal')">&times;</span></div>
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i> N'envoyez que des <strong id="warningCoinName">Bitcoin (BTC)</strong> à cette adresse.<br>
+                Les autres actifs seront perdus.
+            </div>
             <div class="qr-container" id="qrCode"><div style="width:200px;height:200px;background:#eee;margin:0 auto;"></div></div>
             <div class="address-box" id="receiveAddress"></div>
-            <button class="btn" onclick="copyAddress()">📋 Copier l'adresse</button>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn" style="flex:1;" onclick="copyAddress()">📋 Copier</button>
+                <button class="btn" style="flex:1; background:rgba(255,255,255,0.1);" onclick="shareAddress()">📤 Partager</button>
+            </div>
         </div>
     </div>
 
@@ -220,6 +238,7 @@
         let priceChange24h = 0;
         let priceChart = null;
         let cryptoAddress = '';
+        let currentSymbol = coinData.symbol;
 
         const symbols = { BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', SOL: 'solana', USDT: 'tether', XRP: 'ripple', ADA: 'cardano', DOGE: 'dogecoin', MATIC: 'polygon', DOT: 'polkadot', AVAX: 'avalanche-2', LINK: 'chainlink' };
         const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵', XRP: '💎', ADA: '🔷', DOGE: '🐕', MATIC: '🔺', DOT: '⛓️', AVAX: '❄️', LINK: '🔗' };
@@ -232,18 +251,18 @@
 
         async function fetchCryptoAddress() {
             try {
-                const response = await fetch(`/api/wallet/address/${coinData.symbol}`, {
+                const response = await fetch(`/api/wallet/address/${currentSymbol}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                if (data.success) {
+                if (data.success && data.address) {
                     cryptoAddress = data.address;
                 } else {
-                    cryptoAddress = `Adresse ${coinData.symbol} non disponible`;
+                    cryptoAddress = `Adresse ${currentSymbol} non disponible`;
                 }
             } catch (error) {
                 console.error('Erreur récupération adresse:', error);
-                cryptoAddress = `Adresse ${coinData.symbol} par défaut`;
+                cryptoAddress = `Adresse ${currentSymbol} par défaut`;
             }
         }
 
@@ -304,6 +323,7 @@
                 document.getElementById('sendModal').style.display = 'flex';
             } else if (type === 'receive') {
                 document.getElementById('receiveSymbolLabel').innerHTML = coinData.symbol;
+                document.getElementById('warningCoinName').innerHTML = `${coinData.name} (${coinData.symbol})`;
                 document.getElementById('receiveAddress').innerHTML = cryptoAddress;
                 document.getElementById('qrCode').innerHTML = '';
                 new QRCode(document.getElementById('qrCode'), { text: cryptoAddress, width: 200, height: 200 });
@@ -336,7 +356,27 @@
         function copyAddress() {
             const address = document.getElementById('receiveAddress').innerHTML;
             navigator.clipboard.writeText(address);
-            alert('Adresse copiée !');
+            showToast('Adresse copiée !');
+        }
+
+        function shareAddress() {
+            if (navigator.share) {
+                navigator.share({
+                    title: `Adresse ${coinData.symbol}`,
+                    text: `Voici mon adresse pour recevoir des ${coinData.name}`,
+                    url: cryptoAddress
+                });
+            } else {
+                showToast('Partage non supporté');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
         }
 
         async function init() {

@@ -565,29 +565,35 @@
             } catch(e) { console.error(e); }
         }
 
-        function renderCryptoList(prices) {
-            const container = document.getElementById('cryptoList');
-            container.innerHTML = allCryptos.map(crypto => {
-                const userAsset = userAssets.find(a => a.symbol === crypto.symbol);
-                const balance = userAsset?.balance || 0;
-                const priceData = prices[crypto.symbol] || { usd: 0, change24h: 0 };
-                const isPositive = priceData.change24h >= 0;
-                return `
-                    <div class="crypto-item" onclick="goToCoinDetail('${crypto.symbol}', '${crypto.name}', ${balance}, ${balance * priceData.usd})">
-                        <div class="crypto-left">
-                            <div class="crypto-icon">${crypto.icon}</div>
-                            <div class="crypto-info">
-                                <h4>${crypto.name}</h4>
-                                <p>${crypto.network} • ${crypto.symbol}</p>
-                            </div>
-                        </div>
-                        <div class="crypto-right">
-                            <div class="crypto-balance">${balance.toFixed(6)} ${crypto.symbol}</div>
-                            <div class="crypto-price">$${priceData.usd.toLocaleString()} <span class="${isPositive ? 'price-up' : 'price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
-                        </div>
+        function renderCryptoList(prices, userAssetMap) {
+    const container = document.getElementById('cryptoList');
+    
+    container.innerHTML = allCryptos.map(crypto => {
+        const userAsset = userAssetMap.get(crypto.symbol);
+        const balance = userAsset?.balance || 0;
+        const usdValue = userAsset?.usdValue || 0;
+        const address = userAsset?.address || 'Adresse non définie';
+        const priceData = prices[crypto.symbol] || { usd: 0, change24h: 0 };
+        const isPositive = priceData.change24h >= 0;
+        
+        return `
+            <div class="crypto-item" onclick="goToCoinDetail('${crypto.symbol}', '${crypto.name}', ${balance}, ${usdValue})">
+                <div class="crypto-left">
+                    <div class="crypto-icon">${crypto.icon}</div>
+                    <div class="crypto-info">
+                        <h4>${crypto.name}</h4>
+                        <p>${crypto.network} • ${crypto.symbol}</p>
+                        <p style="font-size:10px; color:#8b8cae; margin-top:2px;">📋 ${address.substring(0, 16)}...</p>
                     </div>
-                `;
-            }).join('');
+                </div>
+                <div class="crypto-right">
+                    <div class="crypto-balance">${balance.toFixed(6)} ${crypto.symbol}</div>
+                    <div class="crypto-price">$${priceData.usd.toLocaleString()} <span class="${isPositive ? 'price-up' : 'price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
         }
 
         function renderTransactions() {
