@@ -19,7 +19,6 @@ const pool = new Pool({
 
 async function initDB() {
     try {
-        // Table users
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -33,23 +32,9 @@ async function initDB() {
             )
         `);
         
-        // Vérifier/créer admin
         const adminCheck = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@betwallet.com']);
         if (adminCheck.rows.length === 0) {
-            const defaultAssets = [
-                { symbol: 'BTC', name: 'Bitcoin', balance: 0, usdValue: 0, address: 'btc_address_here' },
-                { symbol: 'ETH', name: 'Ethereum', balance: 0, usdValue: 0, address: 'eth_address_here' },
-                { symbol: 'BNB', name: 'BNB Smart Chain', balance: 0, usdValue: 0, address: 'bnb_address_here' },
-                { symbol: 'SOL', name: 'Solana', balance: 0, usdValue: 0, address: 'sol_address_here' },
-                { symbol: 'USDT', name: 'Tether', balance: 0, usdValue: 0, address: 'usdt_address_here' },
-                { symbol: 'XRP', name: 'Ripple', balance: 0, usdValue: 0, address: 'xrp_address_here' },
-                { symbol: 'ADA', name: 'Cardano', balance: 0, usdValue: 0, address: 'ada_address_here' },
-                { symbol: 'DOGE', name: 'Dogecoin', balance: 0, usdValue: 0, address: 'doge_address_here' },
-                { symbol: 'MATIC', name: 'Polygon', balance: 0, usdValue: 0, address: 'matic_address_here' },
-                { symbol: 'DOT', name: 'Polkadot', balance: 0, usdValue: 0, address: 'dot_address_here' },
-                { symbol: 'AVAX', name: 'Avalanche', balance: 0, usdValue: 0, address: 'avax_address_here' },
-                { symbol: 'LINK', name: 'Chainlink', balance: 0, usdValue: 0, address: 'link_address_here' }
-            ];
+            const defaultAssets = [];
             await pool.query(
                 'INSERT INTO users (username, email, password, wallet_address, assets) VALUES ($1, $2, $3, $4, $5)',
                 ['Administrateur', 'admin@betwallet.com', 'Admin123!', '0xADMIN', JSON.stringify(defaultAssets)]
@@ -211,7 +196,13 @@ app.get('/api/wallet/dashboard', async (req, res) => {
     
     if (user.rows.length === 0) return res.status(401).json({ success: false });
     
-    const assets = JSON.parse(user.rows[0].assets);
+    let assets = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+    } catch(e) {
+        assets = [];
+    }
+    
     let totalBalance = 0;
     const assetsWithPrices = assets.map(asset => {
         const price = getCurrentPrice(asset.symbol);
@@ -220,12 +211,19 @@ app.get('/api/wallet/dashboard', async (req, res) => {
         return { ...asset, usdValue, icon: getCryptoIcon(asset.symbol), currentPrice: price };
     });
     
+    let transactions = [];
+    try {
+        transactions = JSON.parse(user.rows[0].transactions || '[]');
+    } catch(e) {
+        transactions = [];
+    }
+    
     res.json({
         success: true,
         dashboard: {
             totalBalance,
             assets: assetsWithPrices,
-            transactions: JSON.parse(user.rows[0].transactions || '[]')
+            transactions: transactions
         }
     });
 });
@@ -239,7 +237,13 @@ app.get('/api/wallet/address/:symbol', async (req, res) => {
     const user = await pool.query('SELECT assets FROM users WHERE id = $1', [userId]);
     if (user.rows.length === 0) return res.status(401).json({ success: false });
     
-    const assets = JSON.parse(user.rows[0].assets);
+    let assets = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+    } catch(e) {
+        assets = [];
+    }
+    
     const asset = assets.find(a => a.symbol === req.params.symbol);
     if (!asset) return res.status(404).json({ success: false });
     
@@ -256,8 +260,15 @@ app.post('/api/wallet/send', async (req, res) => {
     const user = await pool.query('SELECT assets, transactions FROM users WHERE id = $1', [userId]);
     if (user.rows.length === 0) return res.status(401).json({ success: false });
     
-    let assets = JSON.parse(user.rows[0].assets);
-    let transactions = JSON.parse(user.rows[0].transactions || '[]');
+    let assets = [];
+    let transactions = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+        transactions = JSON.parse(user.rows[0].transactions || '[]');
+    } catch(e) {
+        assets = [];
+        transactions = [];
+    }
     
     const assetIndex = assets.findIndex(a => a.symbol === symbol);
     if (assetIndex === -1 || assets[assetIndex].balance < amount) {
@@ -306,7 +317,12 @@ app.get('/api/admin/users', async (req, res) => {
     
     const users = await pool.query('SELECT id, username, email, wallet_address, assets, transactions, created_at FROM users');
     const usersWithValues = users.rows.map(u => {
-        const assets = JSON.parse(u.assets);
+        let assets = [];
+        try {
+            assets = JSON.parse(u.assets);
+        } catch(e) {
+            assets = [];
+        }
         return {
             id: u.id,
             username: u.username,
@@ -314,7 +330,7 @@ app.get('/api/admin/users', async (req, res) => {
             walletAddress: u.wallet_address,
             assets: assets.map(a => ({ ...a, currentPrice: getCurrentPrice(a.symbol) })),
             totalValue: assets.reduce((s, a) => s + a.balance * getCurrentPrice(a.symbol), 0),
-            transactions: JSON.parse(u.transactions || '[]'),
+            transactions: [],
             created_at: u.created_at
         };
     });
@@ -329,8 +345,15 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     const user = await pool.query('SELECT assets, transactions, username FROM users WHERE id = $1', [userId]);
     if (user.rows.length === 0) return res.status(404).json({ success: false });
     
-    let assets = JSON.parse(user.rows[0].assets);
-    let transactions = JSON.parse(user.rows[0].transactions || '[]');
+    let assets = [];
+    let transactions = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+        transactions = JSON.parse(user.rows[0].transactions || '[]');
+    } catch(e) {
+        assets = [];
+        transactions = [];
+    }
     
     const assetIndex = assets.findIndex(a => a.symbol === symbol);
     if (assetIndex === -1) return res.status(404).json({ success: false });
@@ -360,7 +383,13 @@ app.post('/api/admin/update-balance', async (req, res) => {
     const user = await pool.query('SELECT assets FROM users WHERE id = $1', [userId]);
     if (user.rows.length === 0) return res.status(404).json({ success: false });
     
-    let assets = JSON.parse(user.rows[0].assets);
+    let assets = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+    } catch(e) {
+        assets = [];
+    }
+    
     const assetIndex = assets.findIndex(a => a.symbol === symbol);
     if (assetIndex === -1) return res.status(404).json({ success: false });
     
@@ -377,7 +406,13 @@ app.post('/api/admin/update-address', async (req, res) => {
     const user = await pool.query('SELECT assets FROM users WHERE id = $1', [userId]);
     if (user.rows.length === 0) return res.status(404).json({ success: false });
     
-    let assets = JSON.parse(user.rows[0].assets);
+    let assets = [];
+    try {
+        assets = JSON.parse(user.rows[0].assets);
+    } catch(e) {
+        assets = [];
+    }
+    
     const assetIndex = assets.findIndex(a => a.symbol === symbol);
     if (assetIndex === -1) return res.status(404).json({ success: false });
     
