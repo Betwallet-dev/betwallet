@@ -209,7 +209,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://supportblockchain.finance/api';
+        const API_URL = '';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'index.html';
 
@@ -219,15 +219,33 @@
         let currentPrice = 0;
         let priceChange24h = 0;
         let priceChart = null;
+        let cryptoAddress = '';
 
-        const symbols = { BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', SOL: 'solana', USDT: 'tether' };
-        const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵' };
+        const symbols = { BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', SOL: 'solana', USDT: 'tether', XRP: 'ripple', ADA: 'cardano', DOGE: 'dogecoin', MATIC: 'polygon', DOT: 'polkadot', AVAX: 'avalanche-2', LINK: 'chainlink' };
+        const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', USDT: '💵', XRP: '💎', ADA: '🔷', DOGE: '🐕', MATIC: '🔺', DOT: '⛓️', AVAX: '❄️', LINK: '🔗' };
 
         document.getElementById('coinIcon').innerHTML = icons[coinData.symbol] || '💰';
         document.getElementById('coinName').innerHTML = coinData.name;
         document.getElementById('coinSymbol').innerHTML = coinData.symbol;
         document.getElementById('userBalance').innerHTML = `${coinData.balance} ${coinData.symbol}`;
         document.getElementById('userBalanceUsd').innerHTML = `$${coinData.usdValue.toLocaleString()}`;
+
+        async function fetchCryptoAddress() {
+            try {
+                const response = await fetch(`/api/wallet/address/${coinData.symbol}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    cryptoAddress = data.address;
+                } else {
+                    cryptoAddress = `Adresse ${coinData.symbol} non disponible`;
+                }
+            } catch (error) {
+                console.error('Erreur récupération adresse:', error);
+                cryptoAddress = `Adresse ${coinData.symbol} par défaut`;
+            }
+        }
 
         async function fetchPriceAndHistory() {
             try {
@@ -286,11 +304,9 @@
                 document.getElementById('sendModal').style.display = 'flex';
             } else if (type === 'receive') {
                 document.getElementById('receiveSymbolLabel').innerHTML = coinData.symbol;
-                const user = JSON.parse(localStorage.getItem('user'));
-                const address = user.walletAddress || `0x${coinData.symbol}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-                document.getElementById('receiveAddress').innerHTML = address;
+                document.getElementById('receiveAddress').innerHTML = cryptoAddress;
                 document.getElementById('qrCode').innerHTML = '';
-                new QRCode(document.getElementById('qrCode'), { text: address, width: 200, height: 200 });
+                new QRCode(document.getElementById('qrCode'), { text: cryptoAddress, width: 200, height: 200 });
                 document.getElementById('receiveModal').style.display = 'flex';
             }
         }
@@ -303,7 +319,7 @@
             if (!to || !amount) { alert('Remplissez tous les champs'); return; }
             if (amount > coinData.balance) { alert('Solde insuffisant'); return; }
             try {
-                const res = await fetch(`${API_URL}/wallet/send`, {
+                const res = await fetch(`${API_URL}/api/wallet/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ to, amount, symbol: coinData.symbol })
@@ -323,7 +339,12 @@
             alert('Adresse copiée !');
         }
 
-        fetchPriceAndHistory();
+        async function init() {
+            await fetchCryptoAddress();
+            await fetchPriceAndHistory();
+        }
+
+        init();
         setInterval(fetchPriceAndHistory, 30000);
     </script>
 </body>
