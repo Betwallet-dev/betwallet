@@ -168,6 +168,78 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         
+        /* Modal Recevoir - Style comme sur l'image */
+        .receive-modal-content {
+            background: #11162b;
+            border-radius: 24px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .receive-warning {
+            background: rgba(239,68,68,0.1);
+            border-left: 3px solid #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #ef4444;
+            margin-bottom: 20px;
+        }
+        .receive-crypto-selector {
+            background: #0a0c1a;
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .receive-crypto-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .receive-crypto-icon {
+            font-size: 32px;
+        }
+        .receive-address-box {
+            background: #0a0c1a;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            text-align: center;
+            margin: 15px 0;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .receive-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .receive-buttons button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-copy { background: rgba(245,176,66,0.2); color: #f5b042; }
+        .btn-set-amount { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-share { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .exchange-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            color: #8b8cae;
+            font-size: 12px;
+        }
+        
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -205,34 +277,28 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
-        .modal-content {
+        
+        .crypto-select-list {
             background: #11162b;
             border-radius: 24px;
-            padding: 30px;
+            padding: 20px;
             width: 90%;
-            max-width: 400px;
+            max-width: 350px;
         }
-        .modal-header {
+        .crypto-option {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            gap: 12px;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
         }
-        .close { font-size: 28px; cursor: pointer; }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            background: #0a0c1a;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            color: white;
-            margin: 10px 0;
-        }
+        .crypto-option:hover { background: rgba(245,176,66,0.1); border-radius: 12px; }
         
         @media (max-width: 480px) {
             .total-amount { font-size: 36px; }
@@ -248,7 +314,7 @@
         <div class="wallet-icon" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
     </div>
 
-    <!-- Balance Section (visible sur toutes les pages sauf profile) -->
+    <!-- Balance Section -->
     <div id="balanceSection">
         <div class="balance-section">
             <div class="total-label">SOLDE TOTAL</div>
@@ -320,9 +386,9 @@
 
     <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="background:#11162b; border-radius:24px; padding:30px; width:90%; max-width:400px;">
             <div class="modal-header"><h3>⬆️ Envoyer</h3><span class="close" onclick="closeModal('sendModal')">&times;</span></div>
-            <select id="sendSymbol">
+            <select id="sendSymbol" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; margin:10px 0;">
                 <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
                 <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
@@ -331,22 +397,81 @@
                 <option value="DOT">Polkadot (DOT)</option><option value="AVAX">Avalanche (AVAX)</option>
                 <option value="LINK">Chainlink (LINK)</option>
             </select>
-            <input type="text" id="sendTo" placeholder="Adresse du destinataire">
-            <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
+            <input type="text" id="sendTo" placeholder="Adresse du destinataire" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none; margin:10px 0;">
+            <input type="number" id="sendAmount" placeholder="Montant" step="0.000001" style="width:100%; padding:12px; background:#0a0c1a; border-radius:12px; color:white; border:none; margin:10px 0;">
             <button class="action-btn" style="width:100%;" onclick="sendTransaction()">Confirmer</button>
         </div>
     </div>
 
-    <!-- Modal Recevoir -->
-    <div id="receiveModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>⬇️ Recevoir</h3><span class="close" onclick="closeModal('receiveModal')">&times;</span></div>
-            <div style="text-align:center;">
-                <div id="qrCode" style="width:200px;height:200px;background:white;margin:0 auto;border-radius:16px;display:flex;align-items:center;justify-content:center;">
-                    <i class="fas fa-qrcode" style="font-size:80px; color:#333;"></i>
+    <!-- Modal Recevoir - Sélection crypto d'abord -->
+    <div id="receiveSelectModal" class="modal">
+        <div class="crypto-select-list">
+            <div class="modal-header"><h3>Recevoir</h3><span class="close" onclick="closeModal('receiveSelectModal')">&times;</span></div>
+            <div id="cryptoSelectList">
+                <div class="crypto-option" onclick="selectReceiveCrypto('BTC', 'Bitcoin', '₿')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">₿</span><div><strong>Bitcoin</strong><p style="font-size:12px; color:#8b8cae;">BTC</p></div></div>
                 </div>
-                <div style="background:#0a0c1a; padding:12px; border-radius:12px; margin-top:15px; word-break:break-all; font-family:monospace;" id="receiveAddress"></div>
-                <button class="action-btn" style="margin-top:15px;" onclick="copyAddress()">📋 Copier</button>
+                <div class="crypto-option" onclick="selectReceiveCrypto('ETH', 'Ethereum', 'Ξ')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">Ξ</span><div><strong>Ethereum</strong><p style="font-size:12px; color:#8b8cae;">ETH</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('BNB', 'BNB Smart Chain', '🔶')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">🔶</span><div><strong>BNB Smart Chain</strong><p style="font-size:12px; color:#8b8cae;">BNB</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('SOL', 'Solana', '◎')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">◎</span><div><strong>Solana</strong><p style="font-size:12px; color:#8b8cae;">SOL</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('USDT', 'Tether', '💵')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">💵</span><div><strong>Tether</strong><p style="font-size:12px; color:#8b8cae;">USDT</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('XRP', 'Ripple', '💎')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">💎</span><div><strong>Ripple</strong><p style="font-size:12px; color:#8b8cae;">XRP</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('ADA', 'Cardano', '🔷')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">🔷</span><div><strong>Cardano</strong><p style="font-size:12px; color:#8b8cae;">ADA</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('DOGE', 'Dogecoin', '🐕')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">🐕</span><div><strong>Dogecoin</strong><p style="font-size:12px; color:#8b8cae;">DOGE</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('MATIC', 'Polygon', '🔺')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">🔺</span><div><strong>Polygon</strong><p style="font-size:12px; color:#8b8cae;">MATIC</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('DOT', 'Polkadot', '⛓️')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">⛓️</span><div><strong>Polkadot</strong><p style="font-size:12px; color:#8b8cae;">DOT</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('AVAX', 'Avalanche', '❄️')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">❄️</span><div><strong>Avalanche</strong><p style="font-size:12px; color:#8b8cae;">AVAX</p></div></div>
+                </div>
+                <div class="crypto-option" onclick="selectReceiveCrypto('LINK', 'Chainlink', '🔗')">
+                    <div class="receive-crypto-left"><span style="font-size:28px;">🔗</span><div><strong>Chainlink</strong><p style="font-size:12px; color:#8b8cae;">LINK</p></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Recevoir Détail (après sélection) -->
+    <div id="receiveDetailModal" class="modal">
+        <div class="receive-modal-content">
+            <div class="modal-header"><h3>Recevoir</h3><span class="close" onclick="closeModal('receiveDetailModal')">&times;</span></div>
+            <div class="receive-warning">
+                <i class="fas fa-exclamation-triangle"></i> N'envoyez que des <strong id="warningCoinName">Bitcoin (BTC)</strong> à cette adresse.<br>
+                Les autres actifs seront perdus à jamais.
+            </div>
+            <div class="receive-crypto-selector" onclick="openReceiveSelectModal()">
+                <div class="receive-crypto-left">
+                    <span class="receive-crypto-icon" id="detailCoinIcon">₿</span>
+                    <div><strong id="detailCoinName">Bitcoin</strong><p id="detailCoinSymbol" style="font-size:12px; color:#8b8cae;">BTC</p></div>
+                </div>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="receive-address-box" id="receiveAddressDisplay">bc1q9acftrds4lrs2xsh2wn6wzmwtgpccjktd7gwga</div>
+            <div class="receive-buttons">
+                <button class="btn-copy" onclick="copyReceiveAddress()">Copier</button>
+                <button class="btn-set-amount" onclick="setAmount()">Définir le montant</button>
+                <button class="btn-share" onclick="shareAddress()">Partager</button>
+            </div>
+            <div class="exchange-link">
+                Dépôt depuis une plat. d'échange<br>
+                Par transfert direct depuis votre compte
             </div>
         </div>
     </div>
@@ -359,6 +484,25 @@
         let userAssets = [];
         let marketPrices = {};
         let transactions = [];
+        let currentReceiveSymbol = 'BTC';
+        let currentReceiveName = 'Bitcoin';
+        let currentReceiveIcon = '₿';
+
+        // Données des cryptos pour réception
+        const cryptoAddresses = {
+            'BTC': 'bc1q9acftrds4lrs2xsh2wn6wzmwtgpccjktd7gwga',
+            'ETH': '0x742d35Cc6634C0532925a3b844Bc9e7595f0b7c9',
+            'BNB': '0x742d35Cc6634C0532925a3b844Bc9e7595f0b7c9',
+            'SOL': 'SoL11111111111111111111111111111111111111111',
+            'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            'XRP': 'rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh',
+            'ADA': 'addr1qy0p7v5yq4qz9xq8q5q6q7q8q9q0q1q2q3q4q5q6q7q8q9q0q',
+            'DOGE': 'D5oKxVZqVQZDQG1yYVwQYoZdQY6YQZQY6Y',
+            'MATIC': '0x742d35Cc6634C0532925a3b844Bc9e7595f0b7c9',
+            'DOT': '1z2z3z4z5z6z7z8z9z0z1z2z3z4z5z6z7z8z9z0z',
+            'AVAX': '0x742d35Cc6634C0532925a3b844Bc9e7595f0b7c9',
+            'LINK': '0x514910771AF9Ca656af840dff83E8264EcF986CA'
+        };
 
         const allCryptos = [
             { symbol: 'BTC', name: 'Bitcoin', icon: '₿', network: 'Bitcoin' },
@@ -485,18 +629,61 @@
             alert('💳 Dépôt de cryptos\n\nAdresse de dépôt:\n' + (JSON.parse(localStorage.getItem('user'))?.walletAddress || 'Non disponible'));
         }
 
-        function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
-        function openReceiveModal() { 
-            document.getElementById('receiveModal').style.display = 'flex';
-            const user = JSON.parse(localStorage.getItem('user'));
-            document.getElementById('receiveAddress').innerHTML = user.walletAddress || 'Adresse non disponible';
+        // ==================== RECEVOIR ====================
+        function openReceiveModal() {
+            document.getElementById('receiveSelectModal').style.display = 'flex';
         }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function copyAddress() {
-            const address = document.getElementById('receiveAddress').innerHTML;
+
+        function openReceiveSelectModal() {
+            document.getElementById('receiveDetailModal').style.display = 'none';
+            document.getElementById('receiveSelectModal').style.display = 'flex';
+        }
+
+        function selectReceiveCrypto(symbol, name, icon) {
+            currentReceiveSymbol = symbol;
+            currentReceiveName = name;
+            currentReceiveIcon = icon;
+            
+            // Mettre à jour l'affichage du modal de détail
+            document.getElementById('warningCoinName').innerHTML = `${name} (${symbol})`;
+            document.getElementById('detailCoinIcon').innerHTML = icon;
+            document.getElementById('detailCoinName').innerHTML = name;
+            document.getElementById('detailCoinSymbol').innerHTML = symbol;
+            document.getElementById('receiveAddressDisplay').innerHTML = cryptoAddresses[symbol] || `Adresse ${symbol} générée`;
+            
+            // Fermer le modal de sélection et ouvrir le modal de détail
+            document.getElementById('receiveSelectModal').style.display = 'none';
+            document.getElementById('receiveDetailModal').style.display = 'flex';
+        }
+
+        function copyReceiveAddress() {
+            const address = document.getElementById('receiveAddressDisplay').innerHTML;
             navigator.clipboard.writeText(address);
             alert('Adresse copiée !');
         }
+
+        function setAmount() {
+            const amount = prompt('Entrez le montant à recevoir :', '0.00');
+            if (amount) {
+                alert(`Demande de ${amount} ${currentReceiveSymbol} envoyée !`);
+            }
+        }
+
+        function shareAddress() {
+            const address = document.getElementById('receiveAddressDisplay').innerHTML;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Adresse BetWallet',
+                    text: `Voici mon adresse pour recevoir des ${currentReceiveName} (${currentReceiveSymbol})`,
+                    url: address
+                });
+            } else {
+                alert('Partage non supporté sur ce navigateur');
+            }
+        }
+
+        function openSendModal() { document.getElementById('sendModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         async function sendTransaction() {
             const to = document.getElementById('sendTo').value;
