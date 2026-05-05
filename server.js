@@ -50,15 +50,33 @@ async function connectDB() {
     }
 }
 
-// ==================== PRIX EN EUROS (SIMULÉS MAIS RÉALISTES) ====================
-const CRYPTO_PRICES_EUR = {
-    'BTC': 78500, 'ETH': 3100, 'BNB': 620, 'SOL': 160,
-    'USDT': 0.95, 'XRP': 0.55, 'ADA': 0.35, 'DOGE': 0.12,
-    'MATIC': 0.55, 'DOT': 7.2, 'AVAX': 38, 'LINK': 15
+// ==================== PRIX TEMPS RÉEL (CoinGecko - EUR) ====================
+const COINGECKO_IDS = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'BNB': 'binancecoin',
+    'SOL': 'solana',
+    'USDT': 'tether',
+    'XRP': 'ripple',
+    'ADA': 'cardano',
+    'DOGE': 'dogecoin',
+    'MATIC': 'polygon',
+    'DOT': 'polkadot',
+    'AVAX': 'avalanche-2',
+    'LINK': 'chainlink'
 };
 
 async function getCurrentPriceEUR(symbol) {
-    return CRYPTO_PRICES_EUR[symbol] || 0;
+    try {
+        const id = COINGECKO_IDS[symbol];
+        if (!id) return 0;
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`);
+        const data = await response.json();
+        return data[id]?.eur || 0;
+    } catch (error) {
+        console.error(`Erreur ${symbol}:`, error.message);
+        return 0;
+    }
 }
 
 // ==================== UTILITAIRES ====================
@@ -273,7 +291,22 @@ app.delete('/api/admin/delete-user', async (req, res) => {
 
 // ROUTE PRIX (appelée par le frontend)
 app.get('/api/prices', async (req, res) => {
-    res.json({ success: true, prices: CRYPTO_PRICES_EUR });
+    try {
+        const ids = Object.values(COINGECKO_IDS).join(',');
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=eur`);
+        const data = await response.json();
+        
+        const prices = {};
+        for (const [symbol, id] of Object.entries(COINGECKO_IDS)) {
+            prices[symbol] = data[id]?.eur || 0;
+        }
+        
+        console.log('✅ Prix CoinGecko récupérés');
+        res.json({ success: true, prices: prices });
+    } catch (error) {
+        console.error('❌ Erreur CoinGecko:', error.message);
+        res.json({ success: true, prices: {} });
+    }
 });
 
 app.post('/api/auth/change-password', async (req, res) => {
@@ -300,7 +333,7 @@ async function startServer() {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
         console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-        console.log(`💰 Prix en Euros (simulés mais réalistes)\n`);
+        console.log(`💰 Prix temps réel en Euros via CoinGecko\n`);
     });
 }
 
