@@ -53,40 +53,55 @@ async function connectDB() {
     }
 }
 
-// ==================== PRIX TEMPS RÉEL EN EUROS (CoinGecko) ====================
-const CRYPTO_IDS = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-    'BNB': 'binancecoin',
-    'SOL': 'solana',
-    'USDT': 'tether',
-    'XRP': 'ripple',
-    'ADA': 'cardano',
-    'DOGE': 'dogecoin',
-    'MATIC': 'polygon',
-    'DOT': 'polkadot',
-    'AVAX': 'avalanche-2',
-    'LINK': 'chainlink'
+// ==================== PRIX TEMPS RÉEL EN EUROS (BINANCE + CONVERSION) ====================
+const BINANCE_SYMBOLS = {
+    'BTC': 'BTCUSDT',
+    'ETH': 'ETHUSDT',
+    'BNB': 'BNBUSDT',
+    'SOL': 'SOLUSDT',
+    'USDT': 'USDTUSDT',
+    'XRP': 'XRPUSDT',
+    'ADA': 'ADAUSDT',
+    'DOGE': 'DOGEUSDT',
+    'MATIC': 'MATICUSDT',
+    'DOT': 'DOTUSDT',
+    'AVAX': 'AVAXUSDT',
+    'LINK': 'LINKUSDT'
 };
+
+let eurRate = 0.92;
+let lastRateUpdate = 0;
+
+async function updateEURRate() {
+    if (Date.now() - lastRateUpdate > 3600000) {
+        try {
+            const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await response.json();
+            eurRate = data.rates.EUR;
+            lastRateUpdate = Date.now();
+            console.log(`💰 Taux EUR/USD: ${eurRate}`);
+        } catch (error) {
+            console.error('Erreur taux:', error.message);
+        }
+    }
+    return eurRate;
+}
 
 async function getCurrentPriceEUR(symbol) {
     try {
-        const id = CRYPTO_IDS[symbol];
-        if (!id) return 0;
+        const binanceSymbol = BINANCE_SYMBOLS[symbol];
+        if (!binanceSymbol) return 0;
         
-        // CoinGecko donne directement le prix en EUR
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`);
-        if (!response.ok) {
-            console.warn(`⚠️ CoinGecko: ${response.status} pour ${symbol}`);
-            return 0;
-        }
+        const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`);
+        if (!response.ok) return 0;
         
         const data = await response.json();
-        const priceEUR = data[id]?.eur || 0;
+        const priceUSDT = parseFloat(data.price);
+        const rate = await updateEURRate();
         
-        return priceEUR;
+        return priceUSDT * rate;
     } catch (error) {
-        console.error(`❌ Erreur prix ${symbol}:`, error.message);
+        console.error(`Erreur ${symbol}:`, error.message);
         return 0;
     }
 }
@@ -104,15 +119,6 @@ function getCryptoName(symbol) {
         'MATIC': 'Polygon', 'DOT': 'Polkadot', 'AVAX': 'Avalanche', 'LINK': 'Chainlink'
     };
     return names[symbol] || symbol;
-}
-
-function getCryptoIcon(symbol) {
-    const icons = {
-        'BTC': '₿', 'ETH': 'Ξ', 'BNB': '🔶', 'SOL': '◎', 'USDT': '💵',
-        'XRP': '💎', 'ADA': '🔷', 'DOGE': '🐕', 'MATIC': '🔺', 'DOT': '⛓️',
-        'AVAX': '❄️', 'LINK': '🔗'
-    };
-    return icons[symbol] || '💰';
 }
 
 function generateWalletAddress() {
@@ -150,7 +156,6 @@ app.post('/api/auth/register', async (req, res) => {
         const userId = await getNextId();
         const walletAddress = generateWalletAddress();
         
-        // TOUS LES SOLDES À ZÉRO
         const assets = ALL_CRYPTOS.map(symbol => ({
             symbol: symbol,
             name: getCryptoName(symbol),
@@ -189,7 +194,7 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await usersCollection.findOne({ email, password });
         
         if (!user) {
-            return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
+            return res.status(401).json({ success: false, error: 'Email ou mot de passe不正确' });
         }
         
         const token = `token_${user.id}_${Date.now()}`;
@@ -246,8 +251,7 @@ app.get('/api/wallet/dashboard', async (req, res) => {
         return { 
             ...asset, 
             eurValue: eurValue,
-            currentPriceEUR: currentPriceEUR,
-            icon: getCryptoIcon(asset.symbol)
+            currentPriceEUR: currentPriceEUR
         };
     }));
     
@@ -294,7 +298,6 @@ app.post('/api/wallet/send', async (req, res) => {
     const currentPriceEUR = await getCurrentPriceEUR(symbol);
     
     user.assets[assetIndex].balance -= amount;
-    user.assets[assetIndex].eurValue = user.assets[assetIndex].balance * currentPriceEUR;
     
     user.transactions = user.transactions || [];
     user.transactions.unshift({
@@ -376,7 +379,6 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     const eurValueAdded = amount * currentPriceEUR;
     
     user.assets[assetIndex].balance += amount;
-    user.assets[assetIndex].eurValue = user.assets[assetIndex].balance * currentPriceEUR;
     
     user.transactions = user.transactions || [];
     user.transactions.unshift({
@@ -416,7 +418,6 @@ app.post('/api/admin/update-balance', async (req, res) => {
     const currentPriceEUR = await getCurrentPriceEUR(symbol);
     
     user.assets[assetIndex].balance = balance;
-    user.assets[assetIndex].eurValue = balance * currentPriceEUR;
     
     await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets } });
     res.json({ success: true, message: `Solde ${symbol} mis à jour` });
@@ -447,28 +448,30 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     res.json({ success: true });
 });
 
-// ROUTE PRIX EN TEMPS RÉEL (appelée par le frontend)
+// ROUTE PRIX (appelée par le frontend)
 app.get('/api/prices', async (req, res) => {
     try {
-        const idsString = Object.values(CRYPTO_IDS).join(',');
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${idsString}&vs_currencies=eur`);
-        
-        if (!response.ok) {
-            console.warn(`⚠️ CoinGecko API: ${response.status}`);
-            return res.json({ success: true, prices: {} });
-        }
-        
-        const data = await response.json();
+        const rate = await updateEURRate();
         const prices = {};
         
-        for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
-            prices[symbol] = data[id]?.eur || 0;
+        for (const [symbol, binanceSymbol] of Object.entries(BINANCE_SYMBOLS)) {
+            try {
+                const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    prices[symbol] = parseFloat(data.price) * rate;
+                } else {
+                    prices[symbol] = 0;
+                }
+            } catch (e) {
+                prices[symbol] = 0;
+            }
         }
         
-        console.log('✅ Prix en Euros récupérés');
+        console.log('✅ Prix Binance récupérés en EUR');
         res.json({ success: true, prices: prices });
     } catch (error) {
-        console.error('❌ Erreur API CoinGecko:', error.message);
+        console.error('❌ Erreur API:', error.message);
         res.json({ success: true, prices: {} });
     }
 });
@@ -508,8 +511,8 @@ async function startServer() {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`\n🚀 BetWallet API démarrée sur http://0.0.0.0:${PORT}`);
         console.log(`🔐 Admin: ${adminEmail} / ${adminPassword}`);
-        console.log(`🍃 MongoDB connecté (données persistantes)`);
-        console.log(`💰 Prix en temps réel en Euros (€) via CoinGecko\n`);
+        console.log(`🍃 MongoDB connecté`);
+        console.log(`💰 Prix Binance en temps réel (EUR)\n`);
     });
 }
 
