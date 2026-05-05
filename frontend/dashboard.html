@@ -54,31 +54,7 @@
         }
         .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; }
         
-        .tab-nav {
-            display: flex;
-            padding: 10px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            gap: 25px;
-        }
-        .tab-item {
-            color: #8b8cae;
-            font-weight: 500;
-            cursor: pointer;
-            padding-bottom: 10px;
-            position: relative;
-        }
-        .tab-item.active { color: #f5b042; }
-        .tab-item.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #f5b042;
-        }
-        
-        .crypto-list { padding: 0 20px; display: block; }
+        .crypto-list { padding: 0 20px; }
         .crypto-item {
             display: flex;
             justify-content: space-between;
@@ -98,7 +74,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            overflow: hidden;
+        }
+        .crypto-icon img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
         }
         .crypto-info h4 { font-size: 16px; margin-bottom: 2px; }
         .crypto-info p { font-size: 12px; color: #8b8cae; }
@@ -321,9 +302,6 @@
     </div>
 
     <div id="homePage" class="page active">
-        <div class="tab-nav">
-            <div class="tab-item active" data-tab="crypto" id="cryptoTab">Crypto</div>
-        </div>
         <div class="crypto-list" id="cryptoList">
             <div style="text-align:center; padding:40px;">Chargement des cryptos...</div>
         </div>
@@ -429,6 +407,12 @@
                 <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
                 <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
+                <option value="XRP">Ripple (XRP)</option><option value="ADA">Cardano (ADA)</option>
+                <option value="DOGE">Dogecoin (DOGE)</option>
+                <option value="MATIC">Polygon (MATIC)</option>
+                <option value="DOT">Polkadot (DOT)</option>
+                <option value="AVAX">Avalanche (AVAX)</option>
+                <option value="LINK">Chainlink (LINK)</option>
             </select>
             <input type="text" id="sendTo" placeholder="Adresse du destinataire">
             <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
@@ -443,6 +427,12 @@
                 <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
                 <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
+                <option value="XRP">Ripple (XRP)</option><option value="ADA">Cardano (ADA)</option>
+                <option value="DOGE">Dogecoin (DOGE)</option>
+                <option value="MATIC">Polygon (MATIC)</option>
+                <option value="DOT">Polkadot (DOT)</option>
+                <option value="AVAX">Avalanche (AVAX)</option>
+                <option value="LINK">Chainlink (LINK)</option>
             </select>
             <div id="receiveAddress" style="background:#0a0c1a; padding:12px; border-radius:12px; margin-top:15px; word-break:break-all; font-family:monospace; font-size:12px;"></div>
             <button class="btn" id="copyBtn" onclick="copyAddress()">📋 Copier</button>
@@ -473,6 +463,7 @@
         let currentLanguage = localStorage.getItem('language') || 'fr';
         let currentPrices = {};
 
+        // TRADUCTIONS
         const translations = {
             fr: {
                 totalLabel: 'SOLDE TOTAL', send: 'Envoyer', receive: 'Recevoir', crypto: 'Crypto',
@@ -512,7 +503,6 @@
             document.getElementById('totalLabel').innerHTML = t('totalLabel');
             document.getElementById('sendBtnText').innerHTML = t('send');
             document.getElementById('receiveBtnText').innerHTML = t('receive');
-            document.getElementById('cryptoTab').innerHTML = t('crypto');
             document.getElementById('depositTitle').innerHTML = t('depositTitle');
             document.getElementById('depositText').innerHTML = t('depositText');
             document.getElementById('depositClick').innerHTML = t('depositClick');
@@ -553,19 +543,20 @@
             if (contactMail) contactMail.innerHTML = `<i class="fas fa-envelope" style="color: #f5b042;"></i><br>${t('contactEmail')}`;
         }
 
+        // LISTE DES CRYPTOS AVEC LOGOS RÉELS
         const allCryptos = [
-            { symbol: 'BTC', name: 'Bitcoin', icon: '₿', network: 'Bitcoin' },
-            { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', network: 'Ethereum' },
-            { symbol: 'BNB', name: 'BNB Smart Chain', icon: '🔶', network: 'BSC' },
-            { symbol: 'SOL', name: 'Solana', icon: '◎', network: 'Solana' },
-            { symbol: 'USDT', name: 'Tether', icon: '💵', network: 'ERC-20' },
-            { symbol: 'XRP', name: 'Ripple', icon: '💎', network: 'XRP Ledger' },
-            { symbol: 'ADA', name: 'Cardano', icon: '🔷', network: 'Cardano' },
-            { symbol: 'DOGE', name: 'Dogecoin', icon: '🐕', network: 'Dogecoin' },
-            { symbol: 'MATIC', name: 'Polygon', icon: '🔺', network: 'Polygon' },
-            { symbol: 'DOT', name: 'Polkadot', icon: '⛓️', network: 'Polkadot' },
-            { symbol: 'AVAX', name: 'Avalanche', icon: '❄️', network: 'Avalanche' },
-            { symbol: 'LINK', name: 'Chainlink', icon: '🔗', network: 'Ethereum' }
+            { symbol: 'BTC', name: 'Bitcoin', icon: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png', network: 'Bitcoin' },
+            { symbol: 'ETH', name: 'Ethereum', icon: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png', network: 'Ethereum' },
+            { symbol: 'BNB', name: 'BNB Smart Chain', icon: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2.png', network: 'BSC' },
+            { symbol: 'SOL', name: 'Solana', icon: 'https://assets.coingecko.com/coins/images/4128/small/solana.png', network: 'Solana' },
+            { symbol: 'USDT', name: 'Tether', icon: 'https://assets.coingecko.com/coins/images/325/small/Tether.png', network: 'ERC-20' },
+            { symbol: 'XRP', name: 'Ripple', icon: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png', network: 'XRP Ledger' },
+            { symbol: 'ADA', name: 'Cardano', icon: 'https://assets.coingecko.com/coins/images/975/small/cardano.png', network: 'Cardano' },
+            { symbol: 'DOGE', name: 'Dogecoin', icon: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png', network: 'Dogecoin' },
+            { symbol: 'MATIC', name: 'Polygon', icon: 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png', network: 'Polygon' },
+            { symbol: 'DOT', name: 'Polkadot', icon: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png', network: 'Polkadot' },
+            { symbol: 'AVAX', name: 'Avalanche', icon: 'https://assets.coingecko.com/coins/images/12559/small/coin-round-red.png', network: 'Avalanche' },
+            { symbol: 'LINK', name: 'Chainlink', icon: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png', network: 'Ethereum' }
         ];
 
         async function fetchPrices() {
@@ -621,7 +612,9 @@
                 return `
                     <div class="crypto-item" onclick="goToCoinDetail('${crypto.symbol}', '${crypto.name}', ${balance})">
                         <div class="crypto-left">
-                            <div class="crypto-icon">${crypto.icon}</div>
+                            <div class="crypto-icon">
+                                <img src="${crypto.icon}" alt="${crypto.symbol}">
+                            </div>
                             <div class="crypto-info">
                                 <h4>${crypto.name}</h4>
                                 <p>${crypto.network} • ${crypto.symbol}</p>
@@ -668,7 +661,9 @@
             container.innerHTML = allCryptos.map(crypto => `
                 <div class="crypto-item" style="cursor:pointer;" onclick="selectCryptoForDeposit('${crypto.symbol}', '${crypto.name}')">
                     <div class="crypto-left">
-                        <div class="crypto-icon">${crypto.icon}</div>
+                        <div class="crypto-icon">
+                            <img src="${crypto.icon}" alt="${crypto.symbol}" style="width:32px; height:32px;">
+                        </div>
                         <div class="crypto-info">
                             <h4>${crypto.name}</h4>
                             <p>${crypto.symbol}</p>
@@ -825,13 +820,6 @@
                     profilePage.classList.add('active');
                     balanceSection.style.display = 'none';
                 }
-            });
-        });
-
-        document.querySelectorAll('.tab-item').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
             });
         });
 
