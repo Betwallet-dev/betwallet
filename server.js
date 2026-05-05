@@ -11,6 +11,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
+// Prix en temps réel via CoinGecko (proxy pour éviter CORS)
+app.get('/api/prices', async (req, res) => {
+    try {
+        const ids = 'bitcoin,ethereum,binancecoin,solana,tether,ripple,cardano,dogecoin,polygon,polkadot,avalanche-2,chainlink';
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+        const data = await response.json();
+        res.json({ success: true, prices: data });
+    } catch (error) {
+        console.error('Erreur prix:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
 // ==================== MONGODB ====================
 const MONGODB_URI = 'mongodb+srv://betwallet_user:BetWallet2024@cluster0.i7d5ua6.mongodb.net/?appName=Cluster0';
 const DB_NAME = 'betwallet';

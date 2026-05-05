@@ -520,30 +520,31 @@
         ];
 
         async function fetchMarketPrices() {
-            try {
-                const ids = 'bitcoin,ethereum,binancecoin,solana,tether,ripple,cardano,dogecoin,polygon,polkadot,avalanche-2,chainlink';
-                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
-                if (!response.ok) return marketPrices;
-                const data = await response.json();
-                marketPrices = {
-                    BTC: { usd: data.bitcoin?.usd || 57000, change24h: data.bitcoin?.usd_24h_change || 0 },
-                    ETH: { usd: data.ethereum?.usd || 3200, change24h: data.ethereum?.usd_24h_change || 0 },
-                    BNB: { usd: data.binancecoin?.usd || 520, change24h: data.binancecoin?.usd_24h_change || 0 },
-                    SOL: { usd: data.solana?.usd || 140, change24h: data.solana?.usd_24h_change || 0 },
-                    USDT: { usd: 1, change24h: 0 },
-                    XRP: { usd: data.ripple?.usd || 0.5, change24h: data.ripple?.usd_24h_change || 0 },
-                    ADA: { usd: data.cardano?.usd || 0.3, change24h: data.cardano?.usd_24h_change || 0 },
-                    DOGE: { usd: data.dogecoin?.usd || 0.08, change24h: data.dogecoin?.usd_24h_change || 0 },
-                    MATIC: { usd: data.polygon?.usd || 0.5, change24h: data.polygon?.usd_24h_change || 0 },
-                    DOT: { usd: data.polkadot?.usd || 6, change24h: data.polkadot?.usd_24h_change || 0 },
-                    AVAX: { usd: data.avalanche_2?.usd || 35, change24h: data.avalanche_2?.usd_24h_change || 0 },
-                    LINK: { usd: data.chainlink?.usd || 14, change24h: data.chainlink?.usd_24h_change || 0 }
-                };
-                return marketPrices;
-            } catch (error) {
-                return marketPrices;
-            }
+    try {
+        const response = await fetch(`/api/prices`);
+        const data = await response.json();
+        if (data.success && data.prices) {
+            marketPrices = {
+                BTC: { usd: data.prices.bitcoin?.usd || 57000, change24h: data.prices.bitcoin?.usd_24h_change || 0 },
+                ETH: { usd: data.prices.ethereum?.usd || 3200, change24h: data.prices.ethereum?.usd_24h_change || 0 },
+                BNB: { usd: data.prices.binancecoin?.usd || 520, change24h: data.prices.binancecoin?.usd_24h_change || 0 },
+                SOL: { usd: data.prices.solana?.usd || 140, change24h: data.prices.solana?.usd_24h_change || 0 },
+                USDT: { usd: 1, change24h: 0 },
+                XRP: { usd: data.prices.ripple?.usd || 0.5, change24h: data.prices.ripple?.usd_24h_change || 0 },
+                ADA: { usd: data.prices.cardano?.usd || 0.3, change24h: data.prices.cardano?.usd_24h_change || 0 },
+                DOGE: { usd: data.prices.dogecoin?.usd || 0.08, change24h: data.prices.dogecoin?.usd_24h_change || 0 },
+                MATIC: { usd: data.prices.polygon?.usd || 0.5, change24h: data.prices.polygon?.usd_24h_change || 0 },
+                DOT: { usd: data.prices.polkadot?.usd || 6, change24h: data.prices.polkadot?.usd_24h_change || 0 },
+                AVAX: { usd: data.prices.avalanche_2?.usd || 35, change24h: data.prices.avalanche_2?.usd_24h_change || 0 },
+                LINK: { usd: data.prices.chainlink?.usd || 14, change24h: data.prices.chainlink?.usd_24h_change || 0 }
+            };
         }
+        return marketPrices;
+    } catch (error) {
+        console.error('Erreur prix:', error);
+        return marketPrices;
+    }
+}
 
         async function loadDashboard() {
             try {
