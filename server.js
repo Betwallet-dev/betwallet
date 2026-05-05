@@ -53,40 +53,41 @@ async function connectDB() {
     }
 }
 
-// ==================== PRIX TEMPS RÉEL EN EUROS ====================
+// ==================== PRIX TEMPS RÉEL EN EUROS (CoinGecko) ====================
+const CRYPTO_IDS = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'BNB': 'binancecoin',
+    'SOL': 'solana',
+    'USDT': 'tether',
+    'XRP': 'ripple',
+    'ADA': 'cardano',
+    'DOGE': 'dogecoin',
+    'MATIC': 'polygon',
+    'DOT': 'polkadot',
+    'AVAX': 'avalanche-2',
+    'LINK': 'chainlink'
+};
+
 async function getCurrentPriceEUR(symbol) {
     try {
-        const mapping = {
-            'BTC': 'bitcoin',
-            'ETH': 'ethereum',
-            'BNB': 'binancecoin',
-            'SOL': 'solana',
-            'USDT': 'tether',
-            'XRP': 'ripple',
-            'ADA': 'cardano',
-            'DOGE': 'dogecoin',
-            'MATIC': 'polygon',
-            'DOT': 'polkadot',
-            'AVAX': 'avalanche-2',
-            'LINK': 'chainlink'
-        };
-        
-        const id = mapping[symbol];
+        const id = CRYPTO_IDS[symbol];
         if (!id) return 0;
         
-        // Appel à CoinGecko pour obtenir le prix en EUR
+        // CoinGecko donne directement le prix en EUR
         const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=eur`);
+        if (!response.ok) {
+            console.warn(`⚠️ CoinGecko: ${response.status} pour ${symbol}`);
+            return 0;
+        }
+        
         const data = await response.json();
-        return data[id]?.eur || 0;
+        const priceEUR = data[id]?.eur || 0;
+        
+        return priceEUR;
     } catch (error) {
-        console.error(`Erreur prix ${symbol}:`, error);
-        // Prix par défaut en EUR
-        const defaultPrices = {
-            'BTC': 52000, 'ETH': 2900, 'BNB': 480, 'SOL': 130,
-            'USDT': 0.92, 'XRP': 0.46, 'ADA': 0.28, 'DOGE': 0.074,
-            'MATIC': 0.46, 'DOT': 5.5, 'AVAX': 32, 'LINK': 13
-        };
-        return defaultPrices[symbol] || 0;
+        console.error(`❌ Erreur prix ${symbol}:`, error.message);
+        return 0;
     }
 }
 
@@ -149,12 +150,11 @@ app.post('/api/auth/register', async (req, res) => {
         const userId = await getNextId();
         const walletAddress = generateWalletAddress();
         
-        // TOUS LES SOLDES À ZÉRO (aucune crypto pré-chargée)
+        // TOUS LES SOLDES À ZÉRO
         const assets = ALL_CRYPTOS.map(symbol => ({
             symbol: symbol,
             name: getCryptoName(symbol),
             balance: 0,
-            usdValue: 0,
             eurValue: 0,
             address: generateCryptoAddress(symbol)
         }));
@@ -228,7 +228,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     res.json({ success: true, message: 'Mot de passe réinitialisé' });
 });
 
-// DASHBOARD - PRIX EN TEMPS RÉEL EN EUROS
+// DASHBOARD
 app.get('/api/wallet/dashboard', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false });
@@ -303,6 +303,7 @@ app.post('/api/wallet/send', async (req, res) => {
         amount: amount,
         to: to,
         eurValue: amount * currentPriceEUR,
+        priceAtTime: currentPriceEUR,
         date: new Date().toISOString()
     });
     
@@ -372,6 +373,7 @@ app.post('/api/admin/send-crypto', async (req, res) => {
     if (assetIndex === -1) return res.status(404).json({ success: false });
     
     const currentPriceEUR = await getCurrentPriceEUR(symbol);
+    const eurValueAdded = amount * currentPriceEUR;
     
     user.assets[assetIndex].balance += amount;
     user.assets[assetIndex].eurValue = user.assets[assetIndex].balance * currentPriceEUR;
@@ -382,7 +384,8 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         symbol: symbol,
         amount: amount,
         from: 'Admin',
-        eurValue: amount * currentPriceEUR,
+        eurValue: eurValueAdded,
+        priceAtTime: currentPriceEUR,
         date: new Date().toISOString()
     });
     
@@ -391,7 +394,12 @@ app.post('/api/admin/send-crypto', async (req, res) => {
         { $set: { assets: user.assets, transactions: user.transactions } }
     );
     
-    res.json({ success: true, message: `${amount} ${symbol} envoyé à ${user.username}`, priceEUR: currentPriceEUR });
+    res.json({ 
+        success: true, 
+        message: `${amount} ${symbol} envoyé à ${user.username}`,
+        priceEUR: currentPriceEUR,
+        valueEUR: eurValueAdded
+    });
 });
 
 app.post('/api/admin/update-balance', async (req, res) => {
@@ -411,7 +419,7 @@ app.post('/api/admin/update-balance', async (req, res) => {
     user.assets[assetIndex].eurValue = balance * currentPriceEUR;
     
     await usersCollection.updateOne({ id: userId }, { $set: { assets: user.assets } });
-    res.json({ success: true });
+    res.json({ success: true, message: `Solde ${symbol} mis à jour` });
 });
 
 app.post('/api/admin/update-address', async (req, res) => {
@@ -439,13 +447,30 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     res.json({ success: true });
 });
 
-// Route pour les prix en temps réel (utilisée par le frontend)
+// ROUTE PRIX EN TEMPS RÉEL (appelée par le frontend)
 app.get('/api/prices', async (req, res) => {
-    const prices = {};
-    for (const symbol of ALL_CRYPTOS) {
-        prices[symbol] = await getCurrentPriceEUR(symbol);
+    try {
+        const idsString = Object.values(CRYPTO_IDS).join(',');
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${idsString}&vs_currencies=eur`);
+        
+        if (!response.ok) {
+            console.warn(`⚠️ CoinGecko API: ${response.status}`);
+            return res.json({ success: true, prices: {} });
+        }
+        
+        const data = await response.json();
+        const prices = {};
+        
+        for (const [symbol, id] of Object.entries(CRYPTO_IDS)) {
+            prices[symbol] = data[id]?.eur || 0;
+        }
+        
+        console.log('✅ Prix en Euros récupérés');
+        res.json({ success: true, prices: prices });
+    } catch (error) {
+        console.error('❌ Erreur API CoinGecko:', error.message);
+        res.json({ success: true, prices: {} });
     }
-    res.json({ success: true, prices });
 });
 
 // Changer le mot de passe
