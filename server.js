@@ -440,5 +440,26 @@ app.post('/api/auth/change-password', async (req, res) => {
     
     res.json({ success: true, message: 'Mot de passe modifié' });
 });
-
+ // Changer le mot de passe
+app.post('/api/auth/change-password', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, error: 'Non autorisé' });
+    
+    const userId = parseInt(token.split('_')[1]);
+    const { oldPassword, newPassword } = req.body;
+    
+    const user = await usersCollection.findOne({ id: userId });
+    if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
+    
+    if (user.password !== oldPassword) {
+        return res.status(400).json({ success: false, error: 'Ancien mot de passe incorrect' });
+    }
+    
+    await usersCollection.updateOne(
+        { id: userId },
+        { $set: { password: newPassword } }
+    );
+    
+    res.json({ success: true, message: 'Mot de passe modifié' });
+});
 startServer();

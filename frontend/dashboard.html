@@ -203,7 +203,7 @@
             cursor: pointer;
             margin-bottom: 20px;
         }
-        .currency-option {
+        .option-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -211,7 +211,7 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
             cursor: pointer;
         }
-        .currency-option.selected { color: #f5b042; }
+        .option-item.selected { color: #f5b042; }
         .setting-input {
             width: 100%;
             padding: 12px;
@@ -316,20 +316,20 @@
     <!-- Balance Section -->
     <div id="balanceSection">
         <div class="balance-section">
-            <div class="total-label">SOLDE TOTAL</div>
-            <div class="total-amount" id="totalBalance">$0.00</div>
+            <div class="total-label" id="totalLabel">SOLDE TOTAL</div>
+            <div class="total-amount" id="totalBalance">€0.00</div>
             <div class="total-usd" id="portfolioValue">≈ 0 BTC</div>
         </div>
         <div class="action-buttons">
-            <button class="action-btn" onclick="openSendModal()"><i class="fas fa-arrow-up"></i> <span>Envoyer</span></button>
-            <button class="action-btn" onclick="openReceiveModal()"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
+            <button class="action-btn" onclick="openSendModal()"><i class="fas fa-arrow-up"></i> <span id="sendBtnText">Envoyer</span></button>
+            <button class="action-btn" onclick="openReceiveModal()"><i class="fas fa-arrow-down"></i> <span id="receiveBtnText">Recevoir</span></button>
         </div>
     </div>
 
     <!-- Page Accueil (Crypto) -->
     <div id="homePage" class="page active">
         <div class="tab-nav">
-            <div class="tab-item active" data-tab="crypto">Crypto</div>
+            <div class="tab-item active" data-tab="crypto" id="cryptoTab">Crypto</div>
         </div>
         <div class="crypto-list" id="cryptoList">
             <div style="text-align:center; padding:40px;">Chargement des cryptos...</div>
@@ -340,15 +340,15 @@
     <div id="depositPage" class="page">
         <div class="deposit-card" onclick="showCryptoSelection()">
             <i class="fas fa-arrow-down" style="font-size: 48px; color: #f5b042;"></i>
-            <h3 style="margin: 20px 0 10px;">Dépôt de cryptos</h3>
-            <p style="color: #8b8cae;">Déposez des cryptomonnaies depuis d'autres plateformes d'échange/portefeuilles sur BetWallet</p>
-            <div style="margin-top: 20px; color: #f5b042;">Cliquez pour continuer →</div>
+            <h3 id="depositTitle">Dépôt de cryptos</h3>
+            <p id="depositText">Déposez des cryptomonnaies depuis d'autres plateformes d'échange/portefeuilles sur BetWallet</p>
+            <div style="margin-top: 20px; color: #f5b042;" id="depositClick">Cliquez pour continuer →</div>
         </div>
     </div>
 
     <!-- Page Historique -->
     <div id="historyPage" class="page">
-        <h3 style="margin-bottom: 20px;">📜 Historique des transactions</h3>
+        <h3 id="historyTitle">📜 Historique des transactions</h3>
         <div id="transactionsList">
             <div style="text-align:center; padding:40px;">Chargement...</div>
         </div>
@@ -367,41 +367,44 @@
             
             <div class="profile-menu-item" onclick="showSubpage('preferences')">
                 <div class="profile-menu-icon"><i class="fas fa-sliders-h"></i></div>
-                <div><h4>Préférences</h4><p style="font-size:12px; color:#8b8cae;">Devise, langue</p></div>
+                <div><h4 id="prefLabel">Préférences</h4><p style="font-size:12px; color:#8b8cae;" id="prefSub">Langue</p></div>
                 <div style="margin-left: auto;"><i class="fas fa-chevron-right"></i></div>
             </div>
             
             <div class="profile-menu-item" onclick="showSubpage('security')">
                 <div class="profile-menu-icon"><i class="fas fa-shield-alt"></i></div>
-                <div><h4>Paramètres de sécurité</h4><p style="font-size:12px; color:#8b8cae;">Modifier le mot de passe</p></div>
+                <div><h4 id="securityLabel">Paramètres de sécurité</h4><p style="font-size:12px; color:#8b8cae;" id="securitySub">Modifier le mot de passe</p></div>
                 <div style="margin-left: auto;"><i class="fas fa-chevron-right"></i></div>
             </div>
             
             <div class="profile-menu-item" onclick="showSubpage('contacts')">
                 <div class="profile-menu-icon"><i class="fas fa-envelope"></i></div>
-                <div><h4>Contacts</h4><p style="font-size:12px; color:#8b8cae;">Support</p></div>
+                <div><h4 id="contactsLabel">Contacts</h4><p style="font-size:12px; color:#8b8cae;" id="contactsSub">Support</p></div>
                 <div style="margin-left: auto;"><i class="fas fa-chevron-right"></i></div>
             </div>
             
             <div class="profile-menu-item" onclick="logout()">
                 <div class="profile-menu-icon"><i class="fas fa-sign-out-alt"></i></div>
-                <div><h4>Déconnexion</h4><p style="font-size:12px; color:#8b8cae;">Quitter</p></div>
+                <div><h4 id="logoutLabel">Déconnexion</h4><p style="font-size:12px; color:#8b8cae;" id="logoutSub">Quitter</p></div>
                 <div style="margin-left: auto;"><i class="fas fa-chevron-right"></i></div>
             </div>
         </div>
         
-        <!-- Sous-page Préférences -->
+        <!-- Sous-page Préférences (uniquement langue) -->
         <div id="preferencesSubpage" class="subpage">
             <div class="back-btn" onclick="hideSubpage()"><i class="fas fa-arrow-left"></i></div>
-            <h3>⚙️ Préférences</h3>
+            <h3 id="prefTitle">⚙️ Préférences</h3>
             <div style="margin-top: 20px;">
-                <div class="currency-option" data-currency="USD" onclick="selectCurrency('USD')">
-                    <span><i class="fas fa-dollar-sign"></i> Dollar américain (USD)</span>
-                    <span id="checkUSD" class="selected">✓</span>
-                </div>
-                <div class="currency-option" data-currency="EUR" onclick="selectCurrency('EUR')">
-                    <span><i class="fas fa-euro-sign"></i> Euro (EUR)</span>
-                    <span id="checkEUR"></span>
+                <div>
+                    <h4 style="color: #f5b042; margin-bottom: 10px;" id="languageTitle">🌐 Langue</h4>
+                    <div class="option-item" data-lang="fr" onclick="selectLanguage('fr')">
+                        <span><i class="fas fa-flag"></i> Français</span>
+                        <span id="checkFR" class="selected">✓</span>
+                    </div>
+                    <div class="option-item" data-lang="en" onclick="selectLanguage('en')">
+                        <span><i class="fas fa-flag-usa"></i> English</span>
+                        <span id="checkEN"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,12 +412,12 @@
         <!-- Sous-page Sécurité -->
         <div id="securitySubpage" class="subpage">
             <div class="back-btn" onclick="hideSubpage()"><i class="fas fa-arrow-left"></i></div>
-            <h3>🔒 Modifier le mot de passe</h3>
+            <h3 id="securityTitle">🔒 Modifier le mot de passe</h3>
             <div style="margin-top: 20px;">
                 <input type="password" id="oldPassword" class="setting-input" placeholder="Ancien mot de passe">
                 <input type="password" id="newPassword" class="setting-input" placeholder="Nouveau mot de passe">
                 <input type="password" id="confirmPassword" class="setting-input" placeholder="Confirmer le nouveau mot de passe">
-                <button class="btn" onclick="changePassword()">Valider</button>
+                <button class="btn" id="validateBtn" onclick="changePassword()">Valider</button>
                 <div id="passwordMessage"></div>
             </div>
         </div>
@@ -422,9 +425,9 @@
         <!-- Sous-page Contacts -->
         <div id="contactsSubpage" class="subpage">
             <div class="back-btn" onclick="hideSubpage()"><i class="fas fa-arrow-left"></i></div>
-            <h3>📞 Contacts</h3>
+            <h3 id="contactsTitle">📞 Contacts</h3>
             <div style="margin-top: 20px;">
-                <div class="contact-mail">
+                <div class="contact-mail" id="contactMail">
                     <i class="fas fa-envelope" style="color: #f5b042;"></i><br>
                     info@supportblockchain.finance
                 </div>
@@ -435,46 +438,49 @@
     <!-- Modal Envoyer -->
     <div id="sendModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>⬆️ Envoyer</h3><span class="close" onclick="closeModal('sendModal')">&times;</span></div>
+            <div class="modal-header"><h3 id="sendModalTitle">⬆️ Envoyer</h3><span class="close" onclick="closeModal('sendModal')">&times;</span></div>
             <select id="sendSymbol">
-                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
-                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option>
+                <option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
             </select>
             <input type="text" id="sendTo" placeholder="Adresse du destinataire">
             <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
-            <button class="btn" onclick="sendTransaction()">Confirmer</button>
+            <button class="btn" id="sendConfirmBtn" onclick="sendTransaction()">Confirmer</button>
         </div>
     </div>
 
     <!-- Modal Recevoir -->
     <div id="receiveModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>⬇️ Recevoir</h3><span class="close" onclick="closeModal('receiveModal')">&times;</span></div>
+            <div class="modal-header"><h3 id="receiveModalTitle">⬇️ Recevoir</h3><span class="close" onclick="closeModal('receiveModal')">&times;</span></div>
             <select id="receiveSymbol" onchange="updateReceiveAddress()">
-                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
                 <option value="BNB">BNB (BNB)</option>
                 <option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
             </select>
             <div id="receiveAddress" style="background:#0a0c1a; padding:12px; border-radius:12px; margin-top:15px; word-break:break-all; font-family:monospace; font-size:12px;"></div>
-            <button class="btn" style="margin-top:15px;" onclick="copyAddress()">📋 Copier</button>
+            <button class="btn" id="copyBtn" onclick="copyAddress()">📋 Copier</button>
         </div>
     </div>
 
     <!-- Modal Sélection Crypto pour Dépôt -->
     <div id="cryptoSelectModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>💰 Sélectionner une crypto</h3><span class="close" onclick="closeModal('cryptoSelectModal')">&times;</span></div>
+            <div class="modal-header"><h3 id="selectCryptoTitle">💰 Sélectionner une crypto</h3><span class="close" onclick="closeModal('cryptoSelectModal')">&times;</span></div>
             <div id="cryptoSelectList"></div>
         </div>
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-item active" data-nav="home"><i class="fas fa-home"></i><span>Accueil</span></button>
-        <button class="nav-item" data-nav="deposit"><i class="fas fa-arrow-down"></i><span>Dépôt</span></button>
-        <button class="nav-item" data-nav="history"><i class="fas fa-history"></i><span>Historique</span></button>
-        <button class="nav-item" data-nav="profile"><i class="fas fa-user"></i><span>Profile</span></button>
+        <button class="nav-item active" data-nav="home"><i class="fas fa-home"></i><span id="navHome">Accueil</span></button>
+        <button class="nav-item" data-nav="deposit"><i class="fas fa-arrow-down"></i><span id="navDeposit">Dépôt</span></button>
+        <button class="nav-item" data-nav="history"><i class="fas fa-history"></i><span id="navHistory">Historique</span></button>
+        <button class="nav-item" data-nav="profile"><i class="fas fa-user"></i><span id="navProfile">Profile</span></button>
     </div>
 
     <script>
@@ -485,8 +491,166 @@
         let userAssets = [];
         let marketPrices = {};
         let transactions = [];
-        let currentCurrency = localStorage.getItem('currency') || 'USD';
+        let currentLanguage = localStorage.getItem('language') || 'fr';
+        
+        // Taux de conversion USD vers EUR (fixe pour l'instant, peut être mis à jour via API)
+        const USD_TO_EUR = 0.92;
 
+        // ==================== TRADUCTIONS ====================
+        const translations = {
+            fr: {
+                totalLabel: 'SOLDE TOTAL',
+                send: 'Envoyer',
+                receive: 'Recevoir',
+                crypto: 'Crypto',
+                deposit: 'Dépôt',
+                depositTitle: 'Dépôt de cryptos',
+                depositText: 'Déposez des cryptomonnaies depuis d\'autres plateformes d\'échange/portefeuilles sur BetWallet',
+                depositClick: 'Cliquez pour continuer →',
+                history: 'Historique des transactions',
+                noTransactions: 'Aucune transaction',
+                profile: 'Profile',
+                preferences: 'Préférences',
+                security: 'Paramètres de sécurité',
+                contacts: 'Contacts',
+                logout: 'Déconnexion',
+                language: 'Langue',
+                changePassword: 'Modifier le mot de passe',
+                oldPassword: 'Ancien mot de passe',
+                newPassword: 'Nouveau mot de passe',
+                confirmPassword: 'Confirmer le nouveau mot de passe',
+                validate: 'Valider',
+                contactEmail: 'info@supportblockchain.finance',
+                sendTitle: 'Envoyer',
+                receiveTitle: 'Recevoir',
+                confirm: 'Confirmer',
+                copy: 'Copier',
+                selectCrypto: 'Sélectionner une crypto',
+                addressCopied: 'Adresse copiée !',
+                transactionSent: 'Transaction envoyée !',
+                fillFields: 'Remplissez tous les champs',
+                insufficientBalance: 'Solde insuffisant',
+                networkError: 'Erreur réseau',
+                oldPasswordIncorrect: 'Ancien mot de passe incorrect',
+                passwordChanged: 'Mot de passe modifié avec succès !',
+                passwordMinLength: 'Le mot de passe doit contenir au moins 6 caractères',
+                passwordMismatch: 'Les nouveaux mots de passe ne correspondent pas',
+                fillPasswordFields: 'Veuillez remplir tous les champs',
+                prefSub: 'Langue',
+                securitySub: 'Modifier le mot de passe',
+                contactsSub: 'Support',
+                logoutSub: 'Quitter',
+                home: 'Accueil',
+                depositNav: 'Dépôt',
+                historyNav: 'Historique',
+                profileNav: 'Profile',
+                sending: 'Envoi...'
+            },
+            en: {
+                totalLabel: 'TOTAL BALANCE',
+                send: 'Send',
+                receive: 'Receive',
+                crypto: 'Crypto',
+                deposit: 'Deposit',
+                depositTitle: 'Crypto Deposit',
+                depositText: 'Deposit cryptocurrencies from other exchanges/wallets to BetWallet',
+                depositClick: 'Click to continue →',
+                history: 'Transaction History',
+                noTransactions: 'No transactions',
+                profile: 'Profile',
+                preferences: 'Preferences',
+                security: 'Security Settings',
+                contacts: 'Contacts',
+                logout: 'Logout',
+                language: 'Language',
+                changePassword: 'Change Password',
+                oldPassword: 'Old password',
+                newPassword: 'New password',
+                confirmPassword: 'Confirm new password',
+                validate: 'Validate',
+                contactEmail: 'info@supportblockchain.finance',
+                sendTitle: 'Send',
+                receiveTitle: 'Receive',
+                confirm: 'Confirm',
+                copy: 'Copy',
+                selectCrypto: 'Select a crypto',
+                addressCopied: 'Address copied!',
+                transactionSent: 'Transaction sent!',
+                fillFields: 'Please fill all fields',
+                insufficientBalance: 'Insufficient balance',
+                networkError: 'Network error',
+                oldPasswordIncorrect: 'Old password is incorrect',
+                passwordChanged: 'Password changed successfully!',
+                passwordMinLength: 'Password must be at least 6 characters',
+                passwordMismatch: 'New passwords do not match',
+                fillPasswordFields: 'Please fill all fields',
+                prefSub: 'Language',
+                securitySub: 'Change password',
+                contactsSub: 'Support',
+                logoutSub: 'Exit',
+                home: 'Home',
+                depositNav: 'Deposit',
+                historyNav: 'History',
+                profileNav: 'Profile',
+                sending: 'Sending...'
+            }
+        };
+
+        function t(key) {
+            return translations[currentLanguage][key] || key;
+        }
+
+        function updateUILanguage() {
+            document.getElementById('totalLabel').innerHTML = t('totalLabel');
+            document.getElementById('sendBtnText').innerHTML = t('send');
+            document.getElementById('receiveBtnText').innerHTML = t('receive');
+            document.getElementById('cryptoTab').innerHTML = t('crypto');
+            document.getElementById('depositTitle').innerHTML = t('depositTitle');
+            document.getElementById('depositText').innerHTML = t('depositText');
+            document.getElementById('depositClick').innerHTML = t('depositClick');
+            document.getElementById('historyTitle').innerHTML = `📜 ${t('history')}`;
+            document.getElementById('prefLabel').innerHTML = t('preferences');
+            document.getElementById('prefSub').innerHTML = t('prefSub');
+            document.getElementById('securityLabel').innerHTML = t('security');
+            document.getElementById('securitySub').innerHTML = t('securitySub');
+            document.getElementById('contactsLabel').innerHTML = t('contacts');
+            document.getElementById('contactsSub').innerHTML = t('contactsSub');
+            document.getElementById('logoutLabel').innerHTML = t('logout');
+            document.getElementById('logoutSub').innerHTML = t('logoutSub');
+            document.getElementById('prefTitle').innerHTML = `⚙️ ${t('preferences')}`;
+            document.getElementById('languageTitle').innerHTML = `🌐 ${t('language')}`;
+            document.getElementById('securityTitle').innerHTML = `🔒 ${t('changePassword')}`;
+            document.getElementById('contactsTitle').innerHTML = `📞 ${t('contacts')}`;
+            document.getElementById('sendModalTitle').innerHTML = `⬆️ ${t('send')}`;
+            document.getElementById('receiveModalTitle').innerHTML = `⬇️ ${t('receive')}`;
+            document.getElementById('sendConfirmBtn').innerHTML = t('confirm');
+            document.getElementById('copyBtn').innerHTML = `📋 ${t('copy')}`;
+            document.getElementById('selectCryptoTitle').innerHTML = `💰 ${t('selectCrypto')}`;
+            document.getElementById('navHome').innerHTML = t('home');
+            document.getElementById('navDeposit').innerHTML = t('deposit');
+            document.getElementById('navHistory').innerHTML = t('history');
+            document.getElementById('navProfile').innerHTML = t('profile');
+            
+            const oldPwd = document.getElementById('oldPassword');
+            const newPwd = document.getElementById('newPassword');
+            const confirmPwd = document.getElementById('confirmPassword');
+            if (oldPwd) oldPwd.placeholder = t('oldPassword');
+            if (newPwd) newPwd.placeholder = t('newPassword');
+            if (confirmPwd) confirmPwd.placeholder = t('confirmPassword');
+            
+            const validateBtn = document.getElementById('validateBtn');
+            if (validateBtn) validateBtn.innerHTML = t('validate');
+            
+            const contactMail = document.getElementById('contactMail');
+            if (contactMail) contactMail.innerHTML = `<i class="fas fa-envelope" style="color: #f5b042;"></i><br>${t('contactEmail')}`;
+            
+            const sendToInput = document.getElementById('sendTo');
+            const sendAmountInput = document.getElementById('sendAmount');
+            if (sendToInput) sendToInput.placeholder = t('fillFields');
+            if (sendAmountInput) sendAmountInput.placeholder = t('fillFields');
+        }
+
+        // ==================== CRYPTOS ====================
         const allCryptos = [
             { symbol: 'BTC', name: 'Bitcoin', icon: '₿', network: 'Bitcoin' },
             { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', network: 'Ethereum' },
@@ -540,17 +704,16 @@
                     transactions = data.dashboard.transactions || [];
                     const user = JSON.parse(localStorage.getItem('user'));
                     
-                    const totalValue = userAssets.reduce((sum, a) => sum + (a.usdValue || 0), 0);
-                    const symbol = currentCurrency === 'EUR' ? '€' : '$';
-                    document.getElementById('totalBalance').innerHTML = `${symbol}${(totalValue * (currentCurrency === 'EUR' ? 0.92 : 1)).toLocaleString()}`;
-                    document.getElementById('portfolioValue').innerHTML = `≈ ${(totalValue / (prices.BTC?.usd || 57000)).toFixed(4)} BTC`;
+                    const totalValueUSD = userAssets.reduce((sum, a) => sum + (a.usdValue || 0), 0);
+                    const totalValueEUR = totalValueUSD * USD_TO_EUR;
+                    document.getElementById('totalBalance').innerHTML = `€${totalValueEUR.toLocaleString()}`;
+                    document.getElementById('portfolioValue').innerHTML = `≈ ${(totalValueUSD / (prices.BTC?.usd || 57000)).toFixed(4)} BTC`;
                     
                     document.getElementById('profileUsername').innerHTML = user.username;
                     document.getElementById('profileEmail').innerHTML = user.email;
                     
                     renderCryptoList(prices);
                     renderTransactions();
-                    updateCurrencyDisplay();
                 }
             } catch(e) { console.error(e); }
         }
@@ -564,8 +727,7 @@
                 const balance = userAsset?.balance || 0;
                 const priceData = prices[crypto.symbol] || { usd: 0, change24h: 0 };
                 const isPositive = priceData.change24h >= 0;
-                const symbol = currentCurrency === 'EUR' ? '€' : '$';
-                const convertedPrice = priceData.usd * (currentCurrency === 'EUR' ? 0.92 : 1);
+                const priceEUR = priceData.usd * USD_TO_EUR;
                 
                 return `
                     <div class="crypto-item" onclick="goToCoinDetail('${crypto.symbol}', '${crypto.name}', ${balance})">
@@ -578,7 +740,7 @@
                         </div>
                         <div class="crypto-right">
                             <div class="crypto-balance">${balance.toFixed(6)} ${crypto.symbol}</div>
-                            <div class="crypto-price">${symbol}${convertedPrice.toLocaleString()} <span class="${isPositive ? 'price-up' : 'price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
+                            <div class="crypto-price">€${priceEUR.toLocaleString()} <span class="${isPositive ? 'price-up' : 'price-down'}">${isPositive ? '+' : ''}${priceData.change24h.toFixed(2)}%</span></div>
                         </div>
                     </div>
                 `;
@@ -588,23 +750,26 @@
         function renderTransactions() {
             const container = document.getElementById('transactionsList');
             if (!transactions || transactions.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:40px;">Aucune transaction</div>';
+                container.innerHTML = `<div style="text-align:center; padding:40px;">${t('noTransactions')}</div>`;
                 return;
             }
-            container.innerHTML = transactions.map(tx => `
-                <div class="history-item">
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <div class="history-icon"><i class="fas ${tx.type === 'send' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i></div>
-                        <div>
-                            <div><strong>${tx.type === 'send' ? 'Envoi' : 'Réception'}</strong> ${tx.amount} ${tx.symbol}</div>
-                            <div style="font-size:12px; color:#8b8cae;">${new Date(tx.date).toLocaleString()}</div>
+            container.innerHTML = transactions.map(tx => {
+                const amountEUR = (tx.usdValue || 0) * USD_TO_EUR;
+                return `
+                    <div class="history-item">
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <div class="history-icon"><i class="fas ${tx.type === 'send' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i></div>
+                            <div>
+                                <div><strong>${tx.type === 'send' ? t('send') : t('receive')}</strong> ${tx.amount} ${tx.symbol}</div>
+                                <div style="font-size:12px; color:#8b8cae;">${new Date(tx.date).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="history-amount ${tx.type === 'receive' ? 'positive' : 'negative'}">
+                            ${tx.type === 'receive' ? '+' : '-'} €${amountEUR.toLocaleString()}
                         </div>
                     </div>
-                    <div class="history-amount ${tx.type === 'receive' ? 'positive' : 'negative'}">
-                        ${tx.type === 'receive' ? '+' : '-'} $${tx.usdValue?.toLocaleString() || 0}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function goToCoinDetail(symbol, name, balance) {
@@ -612,7 +777,7 @@
             window.location.href = 'coin-detail.html';
         }
 
-        // Dépôt
+        // ==================== DÉPÔT ====================
         function showCryptoSelection() {
             const container = document.getElementById('cryptoSelectList');
             container.innerHTML = allCryptos.map(crypto => `
@@ -635,7 +800,7 @@
             closeModal('cryptoSelectModal');
         }
 
-        // Profile
+        // ==================== PROFILE ====================
         function showSubpage(subpage) {
             document.querySelectorAll('.subpage').forEach(p => p.classList.remove('active'));
             document.getElementById(`${subpage}Subpage`).classList.add('active');
@@ -645,15 +810,16 @@
             document.querySelectorAll('.subpage').forEach(p => p.classList.remove('active'));
         }
 
-        function updateCurrencyDisplay() {
-            document.getElementById('checkUSD').style.display = currentCurrency === 'USD' ? 'inline' : 'none';
-            document.getElementById('checkEUR').style.display = currentCurrency === 'EUR' ? 'inline' : 'none';
+        function updateLanguageDisplay() {
+            document.getElementById('checkFR').style.display = currentLanguage === 'fr' ? 'inline' : 'none';
+            document.getElementById('checkEN').style.display = currentLanguage === 'en' ? 'inline' : 'none';
         }
 
-        function selectCurrency(currency) {
-            currentCurrency = currency;
-            localStorage.setItem('currency', currency);
-            updateCurrencyDisplay();
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            updateLanguageDisplay();
+            updateUILanguage();
             loadDashboard();
         }
 
@@ -664,15 +830,15 @@
             const messageDiv = document.getElementById('passwordMessage');
             
             if (!oldPassword || !newPassword || !confirmPassword) {
-                messageDiv.innerHTML = '<span class="error-text">Veuillez remplir tous les champs</span>';
+                messageDiv.innerHTML = `<span class="error-text">${t('fillPasswordFields')}</span>`;
                 return;
             }
             if (newPassword !== confirmPassword) {
-                messageDiv.innerHTML = '<span class="error-text">Les nouveaux mots de passe ne correspondent pas</span>';
+                messageDiv.innerHTML = `<span class="error-text">${t('passwordMismatch')}</span>`;
                 return;
             }
             if (newPassword.length < 6) {
-                messageDiv.innerHTML = '<span class="error-text">Le mot de passe doit contenir au moins 6 caractères</span>';
+                messageDiv.innerHTML = `<span class="error-text">${t('passwordMinLength')}</span>`;
                 return;
             }
             
@@ -684,20 +850,20 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    messageDiv.innerHTML = '<span class="success-text">✅ Mot de passe modifié avec succès !</span>';
+                    messageDiv.innerHTML = `<span class="success-text">✅ ${t('passwordChanged')}</span>`;
                     document.getElementById('oldPassword').value = '';
                     document.getElementById('newPassword').value = '';
                     document.getElementById('confirmPassword').value = '';
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = `<span class="error-text">${data.error || 'Erreur'}</span>`;
+                    messageDiv.innerHTML = `<span class="error-text">${data.error || t('oldPasswordIncorrect')}</span>`;
                 }
             } catch(e) {
-                messageDiv.innerHTML = '<span class="error-text">Erreur réseau</span>';
+                messageDiv.innerHTML = `<span class="error-text">${t('networkError')}</span>`;
             }
         }
 
-        // Envoi / Réception
+        // ==================== ENVOI / RÉCEPTION ====================
         async function updateReceiveAddress() {
             const symbol = document.getElementById('receiveSymbol').value;
             const response = await fetch(`/api/wallet/address/${symbol}`, {
@@ -715,17 +881,18 @@
             document.getElementById('receiveModal').style.display = 'flex'; 
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
         function copyAddress() {
             const address = document.getElementById('receiveAddress').innerHTML;
             navigator.clipboard.writeText(address);
-            alert('Adresse copiée !');
+            alert(t('addressCopied'));
         }
 
         async function sendTransaction() {
             const to = document.getElementById('sendTo').value;
             const amount = parseFloat(document.getElementById('sendAmount').value);
             const symbol = document.getElementById('sendSymbol').value;
-            if (!to || !amount) { alert('Remplissez tous les champs'); return; }
+            if (!to || !amount) { alert(t('fillFields')); return; }
             try {
                 const res = await fetch(`/api/wallet/send`, {
                     method: 'POST',
@@ -734,16 +901,16 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('Transaction envoyée !');
+                    alert(t('transactionSent'));
                     closeModal('sendModal');
                     loadDashboard();
                 } else alert(data.error);
-            } catch(e) { alert('Erreur réseau'); }
+            } catch(e) { alert(t('networkError')); }
         }
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-        // Navigation
+        // ==================== NAVIGATION ====================
         const balanceSection = document.getElementById('balanceSection');
         const homePage = document.getElementById('homePage');
         const depositPage = document.getElementById('depositPage');
@@ -786,6 +953,9 @@
             });
         });
 
+        // ==================== INITIALISATION ====================
+        updateLanguageDisplay();
+        updateUILanguage();
         loadDashboard();
         setInterval(() => { loadDashboard(); }, 60000);
     </script>
