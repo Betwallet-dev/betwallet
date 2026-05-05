@@ -55,7 +55,32 @@
         }
         .action-btn:hover { background: rgba(245,176,66,0.2); color: #f5b042; }
         
-        .crypto-list { padding: 0 20px; }
+        /* Onglet Crypto */
+        .tab-nav {
+            display: flex;
+            padding: 10px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 25px;
+        }
+        .tab-item {
+            color: #8b8cae;
+            font-weight: 500;
+            cursor: pointer;
+            padding-bottom: 10px;
+            position: relative;
+        }
+        .tab-item.active { color: #f5b042; }
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #f5b042;
+        }
+        
+        .crypto-list { padding: 0 20px; display: block; }
         .crypto-item {
             display: flex;
             justify-content: space-between;
@@ -114,6 +139,7 @@
         .nav-item i { font-size: 22px; }
         .nav-item span { font-size: 12px; font-weight: 500; }
         .nav-item.active { color: #f5b042; background: rgba(245,176,66,0.1); }
+        .nav-item:hover { color: #f5b042; background: rgba(245,176,66,0.05); }
         
         .modal {
             display: none;
@@ -186,11 +212,15 @@
         <button class="action-btn" onclick="openReceiveModal()"><i class="fas fa-arrow-down"></i> <span>Recevoir</span></button>
     </div>
 
+    <!-- Onglet Crypto -->
+    <div class="tab-nav">
+        <div class="tab-item active" data-tab="crypto">Crypto</div>
+    </div>
+
     <div class="crypto-list" id="cryptoList">
         <div style="text-align:center; padding:40px;">Chargement des cryptos...</div>
     </div>
 
-    <!-- Bottom Navigation -->
     <div class="bottom-nav">
         <button class="nav-item active" data-nav="home"><i class="fas fa-home"></i><span>Accueil</span></button>
         <button class="nav-item" data-nav="deposit"><i class="fas fa-arrow-down"></i><span>Dépôt</span></button>
@@ -203,9 +233,18 @@
         <div class="modal-content">
             <div class="modal-header"><h3>⬆️ Envoyer</h3><span class="close" onclick="closeModal('sendModal')">&times;</span></div>
             <select id="sendSymbol">
-                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
-                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option>
+                <option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
+                <option value="XRP">Ripple (XRP)</option>
+                <option value="ADA">Cardano (ADA)</option>
+                <option value="DOGE">Dogecoin (DOGE)</option>
+                <option value="MATIC">Polygon (MATIC)</option>
+                <option value="DOT">Polkadot (DOT)</option>
+                <option value="AVAX">Avalanche (AVAX)</option>
+                <option value="LINK">Chainlink (LINK)</option>
             </select>
             <input type="text" id="sendTo" placeholder="Adresse du destinataire">
             <input type="number" id="sendAmount" placeholder="Montant" step="0.000001">
@@ -218,12 +257,21 @@
         <div class="modal-content">
             <div class="modal-header"><h3>⬇️ Recevoir</h3><span class="close" onclick="closeModal('receiveModal')">&times;</span></div>
             <select id="receiveSymbol" onchange="updateReceiveAddress()">
-                <option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option>
-                <option value="BNB">BNB (BNB)</option><option value="SOL">Solana (SOL)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BNB">BNB (BNB)</option>
+                <option value="SOL">Solana (SOL)</option>
                 <option value="USDT">Tether (USDT)</option>
+                <option value="XRP">Ripple (XRP)</option>
+                <option value="ADA">Cardano (ADA)</option>
+                <option value="DOGE">Dogecoin (DOGE)</option>
+                <option value="MATIC">Polygon (MATIC)</option>
+                <option value="DOT">Polkadot (DOT)</option>
+                <option value="AVAX">Avalanche (AVAX)</option>
+                <option value="LINK">Chainlink (LINK)</option>
             </select>
             <div style="background:#0a0c1a; padding:12px; border-radius:12px; margin-top:15px; word-break:break-all; font-family:monospace; font-size:12px;" id="receiveAddress"></div>
-            <button class="btn" style="margin-top:15px;" onclick="copyAddress()">📋 Copier l'adresse</button>
+            <button class="btn" style="margin-top:15px;" onclick="copyAddress()">📋 Copier</button>
         </div>
     </div>
 
@@ -376,6 +424,14 @@
         }
 
         function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+
+        // Tab navigation (un seul onglet, mais gardé pour compatibilité)
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
 
         // Bottom navigation
         document.querySelectorAll('.nav-item').forEach(nav => {
